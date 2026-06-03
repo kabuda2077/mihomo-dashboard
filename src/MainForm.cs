@@ -141,7 +141,8 @@ public sealed class MainForm : Form
     #mihomo-core-widget {
       position: fixed;
       top: 12px;
-      right: 86px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 2147483647;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #171717;
@@ -214,6 +215,7 @@ public sealed class MainForm : Form
       width: min(420px, calc(100vw - 32px));
       margin-top: 10px;
       margin-left: auto;
+      margin-right: auto;
       border-radius: 16px;
       border: 1px solid rgba(15, 23, 42, .08);
       background: rgba(255, 255, 255, .96);
@@ -288,6 +290,14 @@ public sealed class MainForm : Form
       font-weight: 700;
     }
     #mihomo-core-widget .mc-toast.show { display: block; }
+    @media (max-width: 1180px) {
+      #mihomo-core-widget {
+        top: 58px;
+        right: 16px;
+        left: auto;
+        transform: none;
+      }
+    }
   `;
   document.head.appendChild(css);
 
