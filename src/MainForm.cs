@@ -19,7 +19,6 @@ public sealed class MainForm : Form
     private bool _initialized;
     private bool _startMinimized;
     private bool _startCoreAfterLaunch;
-    private bool _showingStartupPage;
 
     public MainForm(bool startMinimized, bool startCoreAfterLaunch)
     {
@@ -52,16 +51,12 @@ public sealed class MainForm : Form
 
         _initialized = true;
         await InitializeWebViewAsync();
+        LoadDashboard();
         RefreshStatus();
 
         if (_settings.StartCoreOnLaunch || _startCoreAfterLaunch)
         {
-            ShowStartupPage();
             StartCore();
-        }
-        else
-        {
-            ShowStartupPage();
         }
 
         if (_startMinimized)
@@ -128,10 +123,9 @@ public sealed class MainForm : Form
             return;
         }
 
-        _showingStartupPage = false;
         var apiUrl = Uri.EscapeDataString(_settings.DashboardApiUrl.TrimEnd('/'));
         var secret = Uri.EscapeDataString(_settings.Secret);
-        var uri = new Uri(_dashboardUri, $"?hostname={apiUrl}&secret={secret}");
+        var uri = new Uri(_dashboardUri, $"?hostname={apiUrl}&secret={secret}#/core");
         _webView.CoreWebView2.Navigate(uri.ToString());
     }
 
@@ -142,7 +136,6 @@ public sealed class MainForm : Form
             return;
         }
 
-        _showingStartupPage = true;
         _webView.CoreWebView2.NavigateToString("""
 <!doctype html>
 <html lang="zh-CN">
@@ -476,7 +469,6 @@ public sealed class MainForm : Form
         try
         {
             _mihomo.Stop();
-            ShowStartupPage();
         }
         catch (Exception ex)
         {
@@ -517,7 +509,6 @@ public sealed class MainForm : Form
 
         BeginInvoke(new Action(() =>
         {
-            ShowStartupPage();
             _ = ShowDashboardNoticeAsync($"内核已启动，但无法连接 API：{_settings.DashboardApiUrl}");
         }));
     }

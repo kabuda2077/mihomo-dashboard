@@ -67,6 +67,7 @@ $routerPath = Join-Path $sourceRoot 'src\router\index.ts'
 $router = [System.IO.File]::ReadAllText($routerPath).Replace("`r`n", "`n")
 $router = Replace-Required $router "import ConnectionsPage from '@/views/ConnectionsPage.vue'`n" "import ConnectionsPage from '@/views/ConnectionsPage.vue'`nimport CorePage from '@/views/CorePage.vue'`n" 'CorePage import'
 $router = Replace-Required $router "const childrenRouter = [`n" "const childrenRouter = [`n  {`n    path: 'core',`n    name: ROUTE_NAME.core,`n    component: CorePage,`n  },`n" 'CorePage route'
+$router = Replace-Required $router "  if (!activeBackend.value && to.name !== ROUTE_NAME.setup) {`n" "  if (!activeBackend.value && ![ROUTE_NAME.setup, ROUTE_NAME.core].includes(to.name as ROUTE_NAME)) {`n" 'CorePage route guard'
 Set-Utf8File -Path $routerPath -Content $router
 
 $translations = @(

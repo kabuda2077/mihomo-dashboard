@@ -68,10 +68,10 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 zashboard 本身仍然通过 Clash/Mihomo external-controller API 工作。应用会启动一个本地临时端口来托管 zashboard 静态文件，并默认把 API 地址设置为 `http://127.0.0.1:9090`。
 
-内核启动/停止、路径设置、日志和开机自启控件会作为 zashboard 原生路由集成在侧栏的 `内核` 页面中。内核未运行时应用会先显示内核启动页；启动成功后进入 zashboard，并在侧栏保留 `内核`、`概览`、`代理`、`连接` 等页面入口。
+内核启动/停止、路径设置、日志和开机自启控件会作为 zashboard 原生路由集成在侧栏的 `内核` 页面中。应用打开后会直接进入这个页面；内核启动成功后，侧栏会保留 `内核`、`概览`、`代理`、`连接` 等页面入口。
 
 如果配置启用了 TUN，点击 `启动内核` 时应用会自动请求管理员权限并在提权后继续启动内核。
 
-应用会先确认 Mihomo API 可访问，再进入 zashboard。若 API 暂时不可用，会停留在 `内核` 页面，避免卡在 zashboard 的后端配置页。
+`内核` 页面不依赖 Mihomo API，可在内核未启动时直接打开。应用仍会在启动内核后确认 Mihomo API 是否可访问，并把结果提示在当前页面里。
 
 如果 zashboard 首次打开时要求你选择后端，请在 `内核` 页面里填写 API 地址和 Secret，保存后点击“刷新 UI”。
