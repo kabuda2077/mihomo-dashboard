@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
@@ -8,6 +9,24 @@ namespace MihomoDashboard;
 
 public sealed class MainForm : Form
 {
+    private const int TitleBarHeight = 38;
+    private const int ResizeBorder = 8;
+    private const int WmNcLButtonDown = 0x00A1;
+    private const int WmNcHitTest = 0x0084;
+    private const int HtCaption = 2;
+    private const int HtClient = 1;
+    private const int HtLeft = 10;
+    private const int HtRight = 11;
+    private const int HtTop = 12;
+    private const int HtTopLeft = 13;
+    private const int HtTopRight = 14;
+    private const int HtBottom = 15;
+    private const int HtBottomLeft = 16;
+    private const int HtBottomRight = 17;
+    private const int CsDropShadow = 0x00020000;
+    private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwcpRound = 2;
+
     private readonly AppSettings _settings;
     private readonly MihomoManager _mihomo = new();
     private readonly DashboardServer _dashboardServer;
@@ -15,10 +34,22 @@ public sealed class MainForm : Form
     private readonly Icon _appIcon;
     private readonly NotifyIcon _trayIcon;
     private readonly WebView2 _webView = new();
+    private Button? _maximizeButton;
+    private TrayMenuForm? _trayMenu;
     private bool _allowClose;
     private bool _initialized;
     private bool _startMinimized;
     private bool _startCoreAfterLaunch;
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ClassStyle |= CsDropShadow;
+            return cp;
+        }
+    }
 
     public MainForm(bool startMinimized, bool startCoreAfterLaunch)
     {
@@ -29,6 +60,8 @@ public sealed class MainForm : Form
         _dashboardUri = _dashboardServer.Start();
 
         Text = "Mihomo Dashboard";
+        FormBorderStyle = FormBorderStyle.None;
+        BackColor = Color.FromArgb(244, 244, 245);
         MinimumSize = new Size(1120, 720);
         Size = new Size(1360, 840);
         StartPosition = FormStartPosition.CenterScreen;
@@ -67,8 +100,134 @@ public sealed class MainForm : Form
 
     private void BuildLayout()
     {
+        var titleBar = CreateTitleBar();
         _webView.Dock = DockStyle.Fill;
-        Controls.Add(_webView);
+        _webView.Margin = Padding.Empty;
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 2,
+            ColumnCount = 1,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, TitleBarHeight));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.Controls.Add(titleBar, 0, 0);
+        layout.Controls.Add(_webView, 0, 1);
+        Controls.Add(layout);
+    }
+
+    private Control CreateTitleBar()
+    {
+        var titleBar = new Panel
+        {
+            BackColor = Color.FromArgb(244, 244, 245),
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+            Padding = new Padding(12, 0, 0, 0)
+        };
+        titleBar.MouseDown += (_, e) => BeginWindowDrag(e);
+        titleBar.DoubleClick += (_, _) => ToggleMaximize();
+
+        var appIcon = new PictureBox
+        {
+            Image = _appIcon.ToBitmap(),
+            Size = new Size(18, 18),
+            SizeMode = PictureBoxSizeMode.StretchImage,
+            Location = new Point(11, 10)
+        };
+        appIcon.MouseDown += (_, e) => BeginWindowDrag(e);
+        titleBar.Controls.Add(appIcon);
+
+        var title = new Label
+        {
+            Text = Text,
+            AutoEllipsis = true,
+            BackColor = Color.Transparent,
+            ForeColor = Color.FromArgb(39, 39, 42),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular, GraphicsUnit.Point),
+            Location = new Point(38, 0),
+            Size = new Size(280, TitleBarHeight),
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        title.MouseDown += (_, e) => BeginWindowDrag(e);
+        title.DoubleClick += (_, _) => ToggleMaximize();
+        titleBar.Controls.Add(title);
+
+        var closeButton = CreateWindowButton("×", closeButton: true);
+        closeButton.Click += (_, _) => Close();
+
+        _maximizeButton = CreateWindowButton("□");
+        _maximizeButton.Click += (_, _) => ToggleMaximize();
+
+        var minimizeButton = CreateWindowButton("-");
+        minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
+
+        closeButton.Dock = DockStyle.Right;
+        _maximizeButton.Dock = DockStyle.Right;
+        minimizeButton.Dock = DockStyle.Right;
+        titleBar.Controls.Add(closeButton);
+        titleBar.Controls.Add(_maximizeButton);
+        titleBar.Controls.Add(minimizeButton);
+
+        return titleBar;
+    }
+
+    private static Button CreateWindowButton(string text, bool closeButton = false)
+    {
+        var normalBack = Color.FromArgb(244, 244, 245);
+        var hoverBack = closeButton ? Color.FromArgb(232, 17, 35) : Color.FromArgb(229, 229, 232);
+        var normalText = Color.FromArgb(39, 39, 42);
+        var hoverText = closeButton ? Color.White : normalText;
+
+        var button = new Button
+        {
+            Text = text,
+            Width = 46,
+            Height = TitleBarHeight,
+            BackColor = normalBack,
+            ForeColor = normalText,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", closeButton ? 13f : 10f, FontStyle.Regular, GraphicsUnit.Point),
+            Margin = Padding.Empty,
+            TabStop = false,
+            UseVisualStyleBackColor = false
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseDownBackColor = hoverBack;
+        button.FlatAppearance.MouseOverBackColor = hoverBack;
+        button.MouseEnter += (_, _) =>
+        {
+            button.BackColor = hoverBack;
+            button.ForeColor = hoverText;
+        };
+        button.MouseLeave += (_, _) =>
+        {
+            button.BackColor = normalBack;
+            button.ForeColor = normalText;
+        };
+        return button;
+    }
+
+    private void BeginWindowDrag(MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
+        ReleaseCapture();
+        SendMessage(Handle, WmNcLButtonDown, HtCaption, 0);
+    }
+
+    private void ToggleMaximize()
+    {
+        WindowState = WindowState == FormWindowState.Maximized
+            ? FormWindowState.Normal
+            : FormWindowState.Maximized;
     }
 
     private void BindEvents()
@@ -79,22 +238,45 @@ public sealed class MainForm : Form
 
     private NotifyIcon CreateTrayIcon()
     {
-        var menu = new ContextMenuStrip();
-        menu.Items.Add("显示窗口", null, (_, _) => ShowFromTray());
-        menu.Items.Add("启动内核", null, (_, _) => StartCore());
-        menu.Items.Add("停止内核", null, (_, _) => StopCore());
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("退出", null, (_, _) => ExitApplication());
-
         var icon = new NotifyIcon
         {
             Icon = _appIcon,
             Text = "Mihomo Dashboard",
-            Visible = true,
-            ContextMenuStrip = menu
+            Visible = true
+        };
+        icon.MouseUp += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                ShowTrayMenu(Cursor.Position);
+            }
         };
         icon.DoubleClick += (_, _) => ShowFromTray();
         return icon;
+    }
+
+    private void ShowTrayMenu(Point location)
+    {
+        _trayMenu?.Close();
+
+        var isRunning = _mihomo.IsRunning;
+        _trayMenu = new TrayMenuForm(isRunning, new[]
+        {
+            new TrayMenuItem("显示窗口", ShowFromTray),
+            new TrayMenuItem("启动内核", StartCore, Enabled: !isRunning),
+            new TrayMenuItem("停止内核", StopCore, Enabled: isRunning),
+            TrayMenuItem.Separator(),
+            new TrayMenuItem("退出", ExitApplication)
+        });
+        _trayMenu.FormClosed += (sender, _) =>
+        {
+            if (ReferenceEquals(sender, _trayMenu))
+            {
+                _trayMenu.Dispose();
+                _trayMenu = null;
+            }
+        };
+        _trayMenu.ShowNear(location);
     }
 
     private async Task InitializeWebViewAsync()
@@ -123,10 +305,37 @@ public sealed class MainForm : Form
             return;
         }
 
-        var apiUrl = Uri.EscapeDataString(_settings.DashboardApiUrl.TrimEnd('/'));
-        var secret = Uri.EscapeDataString(_settings.Secret);
-        var uri = new Uri(_dashboardUri, $"?hostname={apiUrl}&secret={secret}#/core");
+        var uri = new Uri(_dashboardUri, $"?{BuildDashboardQuery()}#/core");
         _webView.CoreWebView2.Navigate(uri.ToString());
+    }
+
+    private string BuildDashboardQuery()
+    {
+        var query = new List<string>();
+        if (Uri.TryCreate(_settings.DashboardApiUrl, UriKind.Absolute, out var apiUri))
+        {
+            query.Add(apiUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? "https=1" : "http=1");
+            query.Add($"hostname={Uri.EscapeDataString(apiUri.Host)}");
+            query.Add($"port={Uri.EscapeDataString(apiUri.Port.ToString())}");
+
+            var secondaryPath = apiUri.AbsolutePath.TrimEnd('/');
+            if (!string.IsNullOrWhiteSpace(secondaryPath) && secondaryPath != "/")
+            {
+                query.Add($"secondaryPath={Uri.EscapeDataString(secondaryPath)}");
+            }
+        }
+        else
+        {
+            query.Add("http=1");
+            query.Add("hostname=127.0.0.1");
+            query.Add("port=9090");
+        }
+
+        query.Add($"secret={Uri.EscapeDataString(_settings.Secret)}");
+        query.Add("label=Mihomo%20Dashboard");
+        query.Add("disableUpgradeCore=1");
+
+        return string.Join("&", query);
     }
 
     private void ShowStartupPage()
@@ -383,11 +592,11 @@ public sealed class MainForm : Form
                     SaveSettingsFromMessage(root, showMessage: false);
                     if (_mihomo.IsRunning)
                     {
-                        _ = WaitForApiAndLoadDashboardAsync();
+                        _ = WaitForApiAndNotifyAsync();
                     }
                     else
                     {
-                        await ShowDashboardNoticeAsync("请先启动内核，启动成功后会自动进入面板。");
+                        await ShowDashboardNoticeAsync("请先启动内核，启动成功后即可使用面板。");
                     }
                     break;
                 case "browseCore":
@@ -452,7 +661,7 @@ public sealed class MainForm : Form
             }
 
             _mihomo.Start(_settings);
-            _ = WaitForApiAndLoadDashboardAsync();
+            _ = WaitForApiAndNotifyAsync();
         }
         catch (Exception ex)
         {
@@ -480,7 +689,7 @@ public sealed class MainForm : Form
         }
     }
 
-    private async Task WaitForApiAndLoadDashboardAsync()
+    private async Task WaitForApiAndNotifyAsync()
     {
         using var client = new HttpClient();
         if (!string.IsNullOrWhiteSpace(_settings.Secret))
@@ -496,7 +705,7 @@ public sealed class MainForm : Form
                 using var response = await client.GetAsync(endpoint);
                 if (response.IsSuccessStatusCode)
                 {
-                    BeginInvoke(new Action(LoadDashboard));
+                    BeginInvoke(new Action(SendStateToDashboard));
                     return;
                 }
             }
@@ -542,7 +751,7 @@ public sealed class MainForm : Form
         };
         var json = JsonSerializer.Serialize(state);
         _ = _webView.CoreWebView2.ExecuteScriptAsync(
-            $"window.__mihomoControlSetState && window.__mihomoControlSetState({json}); window.__mihomoStartupSetState && window.__mihomoStartupSetState({json});");
+            $"window.__mihomoApplyBackend && window.__mihomoApplyBackend({json}); window.__mihomoControlSetState && window.__mihomoControlSetState({json}); window.__mihomoStartupSetState && window.__mihomoStartupSetState({json});");
     }
 
     private static string TrimLog(string log)
@@ -617,13 +826,98 @@ public sealed class MainForm : Form
         }
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        TryApplyWindowCorners();
+        UpdateMaximizedBounds();
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        if (WindowState == FormWindowState.Normal)
+        {
+            UpdateMaximizedBounds();
+        }
+    }
+
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
+        if (_maximizeButton is not null)
+        {
+            _maximizeButton.Text = WindowState == FormWindowState.Maximized ? "❐" : "□";
+        }
+
         if (WindowState == FormWindowState.Minimized && _settings.MinimizeToTray)
         {
             HideToTray();
         }
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WmNcHitTest && WindowState == FormWindowState.Normal)
+        {
+            base.WndProc(ref m);
+            if ((int)m.Result == HtClient)
+            {
+                var hitTest = GetResizeHitTest(PointToClient(PointFromLParam(m.LParam)));
+                if (hitTest != HtClient)
+                {
+                    m.Result = (IntPtr)hitTest;
+                }
+            }
+
+            return;
+        }
+
+        base.WndProc(ref m);
+    }
+
+    private void UpdateMaximizedBounds()
+    {
+        if (IsHandleCreated)
+        {
+            MaximizedBounds = Screen.FromHandle(Handle).WorkingArea;
+        }
+    }
+
+    private void TryApplyWindowCorners()
+    {
+        try
+        {
+            var preference = DwmwcpRound;
+            _ = DwmSetWindowAttribute(Handle, DwmwaWindowCornerPreference, ref preference, Marshal.SizeOf<int>());
+        }
+        catch
+        {
+        }
+    }
+
+    private static Point PointFromLParam(IntPtr lParam)
+    {
+        var value = lParam.ToInt64();
+        return new Point(unchecked((short)(value & 0xffff)), unchecked((short)((value >> 16) & 0xffff)));
+    }
+
+    private int GetResizeHitTest(Point point)
+    {
+        var left = point.X < ResizeBorder;
+        var right = point.X >= Width - ResizeBorder;
+        var top = point.Y < ResizeBorder;
+        var bottom = point.Y >= Height - ResizeBorder;
+
+        if (top && left) return HtTopLeft;
+        if (top && right) return HtTopRight;
+        if (bottom && left) return HtBottomLeft;
+        if (bottom && right) return HtBottomRight;
+        if (left) return HtLeft;
+        if (right) return HtRight;
+        if (top) return HtTop;
+        if (bottom) return HtBottom;
+        return HtClient;
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -660,10 +954,11 @@ public sealed class MainForm : Form
 
     protected override void Dispose(bool disposing)
     {
-    if (disposing)
+        if (disposing)
         {
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
+            _trayMenu?.Dispose();
             _appIcon.Dispose();
             _mihomo.Dispose();
             _dashboardServer.Dispose();
@@ -680,4 +975,13 @@ public sealed class MainForm : Form
             ? new Icon(iconPath)
             : Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? (Icon)SystemIcons.Application.Clone();
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr handle, int message, int wParam, int lParam);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr handle, int attribute, ref int attributeValue, int attributeSize);
 }

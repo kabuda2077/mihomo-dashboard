@@ -56,6 +56,57 @@ $corePageSource = Join-Path $repoRoot 'dashboard-native\CorePage.vue'
 $corePageTarget = Join-Path $sourceRoot 'src\views\CorePage.vue'
 Copy-Item -LiteralPath $corePageSource -Destination $corePageTarget -Force
 
+$hostBootstrapPath = Join-Path $sourceRoot 'src\hostBootstrap.ts'
+Set-Utf8File -Path $hostBootstrapPath -Content @'
+import { getBackendFromUrl } from '@/helper/utils'
+import { addBackend } from '@/store/setup'
+import type { Backend } from '@/types'
+
+type HostState = {
+  apiUrl?: string
+  secret?: string
+}
+
+type HostWindow = Window & {
+  __mihomoApplyBackend?: (state: HostState) => void
+}
+
+const normalizePath = (pathname: string) => {
+  const path = pathname.replace(/\/$/, '')
+  return path === '' || path === '/' ? '' : path
+}
+
+const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefined) => {
+  if (!apiUrl) return null
+
+  try {
+    const url = new URL(apiUrl)
+    return {
+      protocol: url.protocol.replace(':', ''),
+      host: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? '443' : '80'),
+      secondaryPath: normalizePath(url.pathname),
+      password: secret || '',
+      label: 'Mihomo Dashboard',
+      disableUpgradeCore: true,
+    } satisfies Omit<Backend, 'uuid'>
+  } catch {
+    return null
+  }
+}
+
+const applyBackend = (backend: Omit<Backend, 'uuid'> | null) => {
+  if (!backend?.protocol || !backend.host || !backend.port) return
+  addBackend(backend)
+}
+
+applyBackend(getBackendFromUrl())
+
+;(window as HostWindow).__mihomoApplyBackend = (state) => {
+  applyBackend(backendFromApiUrl(state.apiUrl, state.secret))
+}
+'@
+
 $constantPath = Join-Path $sourceRoot 'src\constant\index.ts'
 $constant = [System.IO.File]::ReadAllText($constantPath).Replace("`r`n", "`n")
 $constant = Replace-Required $constant "  Cog6ToothIcon,`n  CubeTransparentIcon," "  Cog6ToothIcon,`n  CpuChipIcon,`n  CubeTransparentIcon," 'constant icon import'
@@ -69,6 +120,11 @@ $router = Replace-Required $router "import ConnectionsPage from '@/views/Connect
 $router = Replace-Required $router "const childrenRouter = [`n" "const childrenRouter = [`n  {`n    path: 'core',`n    name: ROUTE_NAME.core,`n    component: CorePage,`n  },`n" 'CorePage route'
 $router = Replace-Required $router "  if (!activeBackend.value && to.name !== ROUTE_NAME.setup) {`n" "  if (!activeBackend.value && ![ROUTE_NAME.setup, ROUTE_NAME.core].includes(to.name as ROUTE_NAME)) {`n" 'CorePage route guard'
 Set-Utf8File -Path $routerPath -Content $router
+
+$mainPath = Join-Path $sourceRoot 'src\main.ts'
+$main = [System.IO.File]::ReadAllText($mainPath).Replace("`r`n", "`n")
+$main = Replace-Required $main "import App from './App.vue'`n" "import App from './App.vue'`nimport './hostBootstrap'`n" 'host bootstrap import'
+Set-Utf8File -Path $mainPath -Content $main
 
 $translations = @(
     @{ Path = 'src\i18n\en.ts'; Value = 'Core' },
