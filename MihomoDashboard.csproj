@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>resources\app.ico</ApplicationIcon>
     <AssemblyName>MihomoDashboard</AssemblyName>
     <RootNamespace>MihomoDashboard</RootNamespace>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -17,6 +18,9 @@
 
   <ItemGroup>
     <Content Include="resources\dashboard\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="resources\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Update="config\config.yaml.example" CopyToOutputDirectory="PreserveNewest" />

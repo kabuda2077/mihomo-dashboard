@@ -12,6 +12,7 @@ public sealed class MainForm : Form
     private readonly MihomoManager _mihomo = new();
     private readonly DashboardServer _dashboardServer;
     private readonly Uri _dashboardUri;
+    private readonly Icon _appIcon;
     private readonly NotifyIcon _trayIcon;
     private readonly WebView2 _webView = new();
     private bool _allowClose;
@@ -32,7 +33,8 @@ public sealed class MainForm : Form
         MinimumSize = new Size(1120, 720);
         Size = new Size(1360, 840);
         StartPosition = FormStartPosition.CenterScreen;
-        Icon = SystemIcons.Application;
+        _appIcon = LoadAppIcon();
+        Icon = _appIcon;
 
         _trayIcon = CreateTrayIcon();
         BuildLayout();
@@ -91,7 +93,7 @@ public sealed class MainForm : Form
 
         var icon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _appIcon,
             Text = "Mihomo Dashboard",
             Visible = true,
             ContextMenuStrip = menu
@@ -607,6 +609,29 @@ public sealed class MainForm : Form
   const findTextElement = (text) => [...document.querySelectorAll('a,button,div,span')]
     .find((element) => element.textContent?.trim() === text);
   const findNavContainer = () => {
+    const overviewItem = clickableNavItem('概览');
+    const overviewRect = overviewItem?.getBoundingClientRect();
+    if (overviewItem && overviewRect && overviewRect.left <= 120) {
+      const directParent = overviewItem.parentElement;
+      if (directParent) {
+        const siblings = [...directParent.children].filter((child) => {
+          const rect = child.getBoundingClientRect();
+          return rect.left <= 120 && rect.width >= 40 && rect.height >= 24;
+        });
+        if (siblings.length >= 4) return directParent;
+      }
+
+      let node = overviewItem.parentElement;
+      while (node && node !== document.body) {
+        const rect = node.getBoundingClientRect();
+        const itemCount = node.querySelectorAll('a,button,[role="button"]').length;
+        if (rect.left <= 120 && rect.width >= 48 && rect.width <= 360 && itemCount >= 4) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+    }
+
     const candidates = [...document.querySelectorAll('aside,nav,div')]
       .map((element) => ({ element, rect: element.getBoundingClientRect() }))
       .filter(({ rect }) =>
@@ -622,21 +647,31 @@ public sealed class MainForm : Form
       }))
       .sort((a, b) => b.score - a.score);
 
-    return candidates[0]?.element || document.querySelector('aside') || document.body;
+    return candidates[0]?.element || document.querySelector('aside') || overviewItem?.parentElement || document.body;
   };
   const clickableNavItem = (label) => {
     const element = findTextElement(label);
     return element?.closest('a,button,[role="button"]') || element?.parentElement || element;
   };
 
-  const navContainer = findNavContainer();
   const coreEntry = document.createElement('button');
   coreEntry.id = 'mihomo-core-entry';
   coreEntry.type = 'button';
   coreEntry.title = '内核';
   coreEntry.innerHTML = `<span class="mc-dot"></span><span>内核</span>`;
-  const firstNavItem = navContainer.querySelector('a,button,[role="button"]');
-  navContainer.insertBefore(coreEntry, firstNavItem || navContainer.firstChild);
+  let navContainer = null;
+  const ensureCoreEntry = () => {
+    const nextNavContainer = findNavContainer();
+    if (!nextNavContainer || nextNavContainer === document.body) return false;
+
+    navContainer = nextNavContainer;
+    const firstNavItem = navContainer.querySelector('a,button,[role="button"]');
+    if (coreEntry.parentElement !== navContainer) {
+      navContainer.insertBefore(coreEntry, firstNavItem || navContainer.firstChild);
+    }
+    updateLayout();
+    return true;
+  };
 
   const page = document.createElement('div');
   page.id = 'mihomo-core-page';
@@ -699,9 +734,16 @@ public sealed class MainForm : Form
 
   let corePageActive = true;
   let lastRunning = false;
-  const nativeItems = navLabels.map(clickableNavItem).filter(Boolean);
-  const sidebarItems = [...navContainer.querySelectorAll('a,button,[role="button"]')].filter((item) => item !== coreEntry);
+  let nativeItems = [];
+  let sidebarItems = [];
+  const refreshSidebarItems = () => {
+    nativeItems = navLabels.map(clickableNavItem).filter(Boolean);
+    sidebarItems = navContainer
+      ? [...navContainer.querySelectorAll('a,button,[role="button"]')].filter((item) => item !== coreEntry)
+      : [];
+  };
   const updateLayout = () => {
+    if (!navContainer) return;
     const rect = navContainer.getBoundingClientRect();
     document.documentElement.style.setProperty('--mc-sidebar-left', `${Math.max(0, rect.right)}px`);
     coreEntry.dataset.compact = rect.width < 120 ? 'true' : 'false';
@@ -724,8 +766,23 @@ public sealed class MainForm : Form
   };
 
   coreEntry.addEventListener('click', () => showCorePage(true));
-  nativeItems.forEach((item) => item.addEventListener('click', () => showCorePage(false)));
+  const wireNativeItems = () => {
+    refreshSidebarItems();
+    nativeItems.forEach((item) => {
+      if (item.dataset.mihomoNativeWired === 'true') return;
+      item.dataset.mihomoNativeWired = 'true';
+      item.addEventListener('click', () => showCorePage(false));
+    });
+  };
   window.addEventListener('resize', updateLayout);
+  const observer = new MutationObserver(() => {
+    ensureCoreEntry();
+    wireNativeItems();
+    updateLayout();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  ensureCoreEntry();
+  wireNativeItems();
   updateLayout();
 
   const root = page;
@@ -757,6 +814,8 @@ public sealed class MainForm : Form
   window.__mihomoControlSetState = (state) => {
     page.dataset.running = state.isRunning ? 'true' : 'false';
     coreEntry.dataset.running = state.isRunning ? 'true' : 'false';
+    ensureCoreEntry();
+    wireNativeItems();
     updateNavigation(!!state.isRunning);
     root.querySelector('[data-role="status"]').textContent = state.isRunning
       ? `运行中 · PID ${state.processId ?? ''}`
@@ -1098,15 +1157,24 @@ public sealed class MainForm : Form
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+    if (disposing)
         {
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
+            _appIcon.Dispose();
             _mihomo.Dispose();
             _dashboardServer.Dispose();
             _webView.Dispose();
         }
 
         base.Dispose(disposing);
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "resources", "app.ico");
+        return File.Exists(iconPath)
+            ? new Icon(iconPath)
+            : Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? (Icon)SystemIcons.Application.Clone();
     }
 }
