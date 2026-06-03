@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 
 namespace MihomoDashboard;
@@ -26,6 +27,8 @@ public sealed class WindowCaptionButton : Control
         Cursor = Cursors.Default;
     }
 
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public WindowCaptionButtonKind Kind
     {
         get => _kind;
