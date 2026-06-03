@@ -1,10 +1,10 @@
 # Mihomo Dashboard
 
-一个轻量的 Windows 桌面管理器，用 WinForms + WebView2 承载 zashboard 静态 UI，并负责启动/停止 mihomo 内核、托盘驻留和开机自启。
+一个轻量的 Windows 桌面管理器，用 WinForms + WebView2 承载 zashboard UI，并负责启动/停止 mihomo 内核、托盘驻留和开机自启。
 
 ## 功能
 
-- 内嵌 `Zephyruso/zashboard` 的 `gh-pages` 静态 UI。
+- 在 GitHub Actions 中构建 `Zephyruso/zashboard` 源码，并加入原生 `内核` 路由。
 - 启动、停止 mihomo 内核，并显示 stdout/stderr 日志。
 - 系统托盘图标，支持显示窗口、启动内核、停止内核、退出。
 - 当前用户开机自启，写入 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，不需要管理员权限。
@@ -12,7 +12,9 @@
 
 ## 目录
 
-- `resources/dashboard`: zashboard 静态文件。
+- `resources/dashboard`: zashboard 静态文件。GitHub Actions 会在发布前重新生成带 `内核` 路由的版本。
+- `dashboard-native`: 注入到 zashboard 源码中的原生内核页面。
+- `tools/build-zashboard.ps1`: 下载、补丁并构建 zashboard 的脚本。
 - `cores`: 建议放置 `mihomo.exe`。
 - `config`: 建议放置 `config.yaml`，已提供 `config.yaml.example`。
 - `src`: 桌面管理器源码。
@@ -29,7 +31,13 @@ external-controller: 127.0.0.1:9090
 secret: ""
 ```
 
-5. 编译运行：
+5. 如需本地构建带原生 `内核` 路由的 zashboard，需要安装 Node.js 24 和 pnpm 10，然后运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-zashboard.ps1
+```
+
+6. 编译运行：
 
 ```powershell
 dotnet restore
@@ -60,7 +68,7 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 zashboard 本身仍然通过 Clash/Mihomo external-controller API 工作。应用会启动一个本地临时端口来托管 zashboard 静态文件，并默认把 API 地址设置为 `http://127.0.0.1:9090`。
 
-内核启动/停止、路径设置、日志和开机自启控件会集成在 zashboard 侧栏的 `内核` 页面中。内核未运行时只显示内核页面；启动成功后会恢复 `概览`、`代理`、`连接` 等 zashboard 页面入口。
+内核启动/停止、路径设置、日志和开机自启控件会作为 zashboard 原生路由集成在侧栏的 `内核` 页面中。内核未运行时应用会先显示内核启动页；启动成功后进入 zashboard，并在侧栏保留 `内核`、`概览`、`代理`、`连接` 等页面入口。
 
 如果配置启用了 TUN，点击 `启动内核` 时应用会自动请求管理员权限并在提权后继续启动内核。
 
