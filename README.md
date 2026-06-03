@@ -36,10 +36,10 @@ dotnet restore
 dotnet run
 ```
 
-发布单文件：
+发布：
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained false /p:PublishSingleFile=true
+dotnet publish -c Release -r win-x64 --self-contained false
 ```
 
 输出位置通常是 `bin\Release\net9.0-windows\win-x64\publish`。
@@ -54,7 +54,7 @@ dotnet publish -c Release -r win-x64 --self-contained false /p:PublishSingleFile
 2. 进入最新一次 `Build Windows` 任务。
 3. 在页面底部下载 `MihomoDashboard-win-x64` artifact。
 
-当前 workflow 使用 `--self-contained false`，产物更小，但目标电脑需要已安装 .NET 9 Desktop Runtime。你的电脑已经有 .NET 9 Desktop Runtime，所以适合这个模式。
+当前 workflow 使用 `--self-contained false`，产物更小，但目标电脑需要已安装 .NET 9 Desktop Runtime。你的电脑已经有 .NET 9 Desktop Runtime，所以适合这个模式。下载 artifact 后请先完整解压，再运行里面的 `MihomoDashboard.exe`，不要只单独拷贝 exe。
 
 ## 说明
 
