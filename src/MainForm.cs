@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -16,10 +17,12 @@ public sealed class MainForm : Form
     private bool _allowClose;
     private bool _initialized;
     private bool _startMinimized;
+    private bool _startCoreAfterLaunch;
 
-    public MainForm(bool startMinimized)
+    public MainForm(bool startMinimized, bool startCoreAfterLaunch)
     {
         _startMinimized = startMinimized;
+        _startCoreAfterLaunch = startCoreAfterLaunch;
         _settings = AppSettings.Load();
         _dashboardServer = new DashboardServer(Path.Combine(AppContext.BaseDirectory, "resources", "dashboard"));
         _dashboardUri = _dashboardServer.Start();
@@ -48,7 +51,7 @@ public sealed class MainForm : Form
         await InitializeWebViewAsync();
         RefreshStatus();
 
-        if (_settings.StartCoreOnLaunch)
+        if (_settings.StartCoreOnLaunch || _startCoreAfterLaunch)
         {
             StartCore();
         }
@@ -154,6 +157,8 @@ public sealed class MainForm : Form
       cursor: pointer;
       font: 700 14px Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif;
       text-align: left;
+      overflow: hidden;
+      white-space: nowrap;
     }
     #mihomo-core-entry[data-active="true"] {
       background: #18181b;
@@ -167,6 +172,19 @@ public sealed class MainForm : Form
       background: #f97316;
       box-shadow: 0 0 0 3px rgba(249, 115, 22, .16);
       flex: 0 0 auto;
+    }
+    #mihomo-core-entry span:last-child {
+      overflow: hidden;
+      text-overflow: clip;
+    }
+    #mihomo-core-entry[data-compact="true"] {
+      width: 56px;
+      justify-content: center;
+      padding: 0;
+      margin: 8px auto;
+    }
+    #mihomo-core-entry[data-compact="true"] span:last-child {
+      display: none;
     }
     #mihomo-core-entry[data-running="true"] .mc-dot,
     #mihomo-core-page[data-running="true"] .mc-dot {
@@ -351,17 +369,22 @@ public sealed class MainForm : Form
   const findTextElement = (text) => [...document.querySelectorAll('a,button,div,span')]
     .find((element) => element.textContent?.trim() === text);
   const findNavContainer = () => {
-    const overview = findTextElement('概览');
-    let node = overview;
-    while (node && node !== document.body) {
-      const rect = node.getBoundingClientRect();
-      const text = node.textContent || '';
-      if (rect.width >= 160 && rect.width <= 360 && rect.left < 40 && text.includes('概览') && text.includes('代理')) {
-        return node;
-      }
-      node = node.parentElement;
-    }
-    return document.querySelector('aside') || overview?.parentElement || document.body;
+    const candidates = [...document.querySelectorAll('aside,nav,div')]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) =>
+        rect.left <= 16 &&
+        rect.top <= 110 &&
+        rect.width >= 48 &&
+        rect.width <= 360 &&
+        rect.height >= window.innerHeight * 0.55
+      )
+      .map(({ element, rect }) => ({
+        element,
+        score: rect.height + element.querySelectorAll('a,button,[role="button"]').length * 80 - rect.width
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    return candidates[0]?.element || document.querySelector('aside') || document.body;
   };
   const clickableNavItem = (label) => {
     const element = findTextElement(label);
@@ -372,8 +395,10 @@ public sealed class MainForm : Form
   const coreEntry = document.createElement('button');
   coreEntry.id = 'mihomo-core-entry';
   coreEntry.type = 'button';
+  coreEntry.title = '内核';
   coreEntry.innerHTML = `<span class="mc-dot"></span><span>内核</span>`;
-  navContainer.insertBefore(coreEntry, navContainer.firstChild);
+  const firstNavItem = navContainer.querySelector('a,button,[role="button"]');
+  navContainer.insertBefore(coreEntry, firstNavItem || navContainer.firstChild);
 
   const page = document.createElement('div');
   page.id = 'mihomo-core-page';
@@ -392,13 +417,12 @@ public sealed class MainForm : Form
         <div class="mc-actions">
           <button data-action="start">启动内核</button>
           <button class="danger" data-action="stop">停止内核</button>
-          <button class="warn" data-action="restartAdmin">管理员重启</button>
         </div>
       </div>
       <div class="mc-grid">
         <div class="mc-card">
           <h2>启动配置</h2>
-          <div class="mc-note">如果配置启用了 TUN，普通权限启动可能会出现 Access is denied。请点击“管理员重启”后再启动内核，或关闭配置里的 TUN。</div>
+          <div class="mc-note">如果配置启用了 TUN，启动内核时会自动请求管理员权限。看到 UAC 提示后允许即可；不需要 TUN 时也可以关闭配置里的 TUN。</div>
           <label>内核路径</label>
           <div class="mc-field">
             <input type="text" data-field="corePath" />
@@ -438,9 +462,11 @@ public sealed class MainForm : Form
   let corePageActive = true;
   let lastRunning = false;
   const nativeItems = navLabels.map(clickableNavItem).filter(Boolean);
+  const sidebarItems = [...navContainer.querySelectorAll('a,button,[role="button"]')].filter((item) => item !== coreEntry);
   const updateLayout = () => {
     const rect = navContainer.getBoundingClientRect();
     document.documentElement.style.setProperty('--mc-sidebar-left', `${Math.max(0, rect.right)}px`);
+    coreEntry.dataset.compact = rect.width < 120 ? 'true' : 'false';
   };
   const showCorePage = (show) => {
     corePageActive = show;
@@ -450,6 +476,11 @@ public sealed class MainForm : Form
   const updateNavigation = (running) => {
     nativeItems.forEach((item) => {
       item.style.display = running ? '' : 'none';
+    });
+    sidebarItems.forEach((item) => {
+      if (nativeItems.includes(item)) return;
+      const rect = item.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.55) item.style.display = running ? '' : 'none';
     });
     if (!running) showCorePage(true);
   };
@@ -483,7 +514,6 @@ public sealed class MainForm : Form
     if (action === 'reload') return post({ ...collect(), type: 'reload' });
     if (action === 'browseCore') return post({ type: 'browseCore' });
     if (action === 'browseConfig') return post({ type: 'browseConfig' });
-    if (action === 'restartAdmin') return post({ ...collect(), type: 'restartAdmin' });
   });
 
   window.__mihomoControlSetState = (state) => {
@@ -507,7 +537,7 @@ public sealed class MainForm : Form
       showCorePage(true);
     } else if (!lastRunning) {
       showCorePage(false);
-      nativeItems[0]?.click();
+      (nativeItems[0] || sidebarItems[0])?.click();
     } else if (corePageActive) {
       showCorePage(true);
     }
@@ -556,10 +586,6 @@ public sealed class MainForm : Form
                     break;
                 case "browseConfig":
                     BrowseConfigPath();
-                    break;
-                case "restartAdmin":
-                    SaveSettingsFromMessage(root, showMessage: false);
-                    RelaunchAsAdministrator();
                     break;
             }
 
@@ -610,6 +636,12 @@ public sealed class MainForm : Form
     {
         try
         {
+            if (!IsRunningAsAdministrator())
+            {
+                RelaunchAsAdministrator(startCore: true);
+                return;
+            }
+
             _mihomo.Start(_settings);
         }
         catch (Exception ex)
@@ -714,11 +746,19 @@ public sealed class MainForm : Form
         }
     }
 
-    private void RelaunchAsAdministrator()
+    private static bool IsRunningAsAdministrator()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        var principal = new WindowsPrincipal(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    private void RelaunchAsAdministrator(bool startCore)
     {
         try
         {
-            var startInfo = new ProcessStartInfo(Application.ExecutablePath)
+            var arguments = startCore ? "--start-core" : "";
+            var startInfo = new ProcessStartInfo(Application.ExecutablePath, arguments)
             {
                 UseShellExecute = true,
                 Verb = "runas"

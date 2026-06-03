@@ -12,13 +12,15 @@ jobs:
   build:
     name: Publish win-x64
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 9.0.x
 
@@ -29,7 +31,7 @@ jobs:
         run: dotnet publish -c Release -r win-x64 --self-contained false /p:DebugType=None /p:DebugSymbols=false
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MihomoDashboard-win-x64
           path: bin/Release/net9.0-windows/win-x64/publish/**

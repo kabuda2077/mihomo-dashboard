@@ -20,7 +20,8 @@ internal static class Program
             ApplicationConfiguration.Initialize();
 
             var startMinimized = args.Any(arg => string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
-            using var form = new MainForm(startMinimized);
+            var startCore = args.Any(arg => string.Equals(arg, "--start-core", StringComparison.OrdinalIgnoreCase));
+            using var form = new MainForm(startMinimized, startCore);
             Application.Run(form);
         }
         catch (Exception exception)
