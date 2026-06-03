@@ -1,37 +1,17 @@
+using System.Text.Json;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace MihomoDashboard;
 
 public sealed class MainForm : Form
 {
-    private static readonly Color ShellBackground = Color.FromArgb(14, 18, 24);
-    private static readonly Color PanelBackground = Color.FromArgb(22, 27, 36);
-    private static readonly Color CardBackground = Color.FromArgb(30, 37, 48);
-    private static readonly Color InputBackground = Color.FromArgb(15, 19, 26);
-    private static readonly Color TextPrimary = Color.FromArgb(241, 245, 249);
-    private static readonly Color TextSecondary = Color.FromArgb(148, 163, 184);
-    private static readonly Color Accent = Color.FromArgb(56, 189, 248);
-    private static readonly Color Success = Color.FromArgb(52, 211, 153);
-    private static readonly Color Warning = Color.FromArgb(251, 146, 60);
-
     private readonly AppSettings _settings;
     private readonly MihomoManager _mihomo = new();
     private readonly DashboardServer _dashboardServer;
     private readonly Uri _dashboardUri;
     private readonly NotifyIcon _trayIcon;
     private readonly WebView2 _webView = new();
-    private readonly TextBox _corePathBox = new();
-    private readonly TextBox _configPathBox = new();
-    private readonly TextBox _apiUrlBox = new();
-    private readonly TextBox _secretBox = new();
-    private readonly TextBox _logBox = new();
-    private readonly Label _statusLabel = new();
-    private readonly Button _startButton = new();
-    private readonly Button _stopButton = new();
-    private readonly CheckBox _autostartBox = new();
-    private readonly CheckBox _startCoreBox = new();
-    private readonly CheckBox _minimizeToTrayBox = new();
-    private SplitContainer? _rootSplit;
     private bool _allowClose;
     private bool _initialized;
     private bool _startMinimized;
@@ -45,15 +25,13 @@ public sealed class MainForm : Form
 
         Text = "Mihomo Dashboard";
         MinimumSize = new Size(1120, 720);
-        Size = new Size(1280, 820);
+        Size = new Size(1360, 840);
         StartPosition = FormStartPosition.CenterScreen;
         Icon = SystemIcons.Application;
-        BackColor = ShellBackground;
 
         _trayIcon = CreateTrayIcon();
         BuildLayout();
         BindEvents();
-        LoadSettingsToUi();
     }
 
     protected override async void OnShown(EventArgs e)
@@ -66,7 +44,6 @@ public sealed class MainForm : Form
         }
 
         _initialized = true;
-        ApplySplitLayout();
         await InitializeWebViewAsync();
         RefreshStatus();
 
@@ -83,240 +60,14 @@ public sealed class MainForm : Form
 
     private void BuildLayout()
     {
-        var root = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            FixedPanel = FixedPanel.Panel1,
-            BackColor = ShellBackground,
-            SplitterWidth = 1
-        };
-        _rootSplit = root;
-        root.SizeChanged += (_, _) => ApplySplitLayout();
-
-        Controls.Add(root);
-
-        var left = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 5,
-            Padding = new Padding(18),
-            BackColor = PanelBackground
-        };
-        left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        left.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.Panel1.Controls.Add(left);
-
-        var title = new Label
-        {
-            Text = "Mihomo",
-            AutoSize = true,
-            ForeColor = TextPrimary,
-            Font = new Font("Segoe UI Variable Display", 24, FontStyle.Bold),
-            Margin = new Padding(0, 0, 0, 0)
-        };
-        left.Controls.Add(title, 0, 0);
-
-        var subtitle = new Label
-        {
-            Text = "Core control and zashboard",
-            AutoSize = true,
-            ForeColor = TextSecondary,
-            Font = new Font("Segoe UI", 9),
-            Margin = new Padding(2, 0, 0, 18)
-        };
-        left.Controls.Add(subtitle, 0, 1);
-
-        var settingsPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            ColumnCount = 3,
-            AutoSize = true,
-            Padding = new Padding(14),
-            Margin = new Padding(0, 0, 0, 14),
-            BackColor = CardBackground
-        };
-        settingsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        settingsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        settingsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        left.Controls.Add(settingsPanel, 0, 2);
-
-        AddPathRow(settingsPanel, "内核路径", _corePathBox, BrowseCorePath);
-        AddPathRow(settingsPanel, "配置文件", _configPathBox, BrowseConfigPath);
-        AddTextRow(settingsPanel, "API 地址", _apiUrlBox);
-        AddTextRow(settingsPanel, "Secret", _secretBox, password: false);
-
-        StyleCheckBox(_startCoreBox);
-        StyleCheckBox(_minimizeToTrayBox);
-        StyleCheckBox(_autostartBox);
-        _startCoreBox.Text = "启动软件时自动启动内核";
-        _minimizeToTrayBox.Text = "关闭窗口时最小化到托盘";
-        _autostartBox.Text = "开机自启";
-        settingsPanel.Controls.Add(_startCoreBox, 0, settingsPanel.RowCount++);
-        settingsPanel.SetColumnSpan(_startCoreBox, 3);
-        settingsPanel.Controls.Add(_minimizeToTrayBox, 0, settingsPanel.RowCount++);
-        settingsPanel.SetColumnSpan(_minimizeToTrayBox, 3);
-        settingsPanel.Controls.Add(_autostartBox, 0, settingsPanel.RowCount++);
-        settingsPanel.SetColumnSpan(_autostartBox, 3);
-
-        var controlPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            Margin = new Padding(0, 0, 0, 0),
-            Padding = new Padding(0)
-        };
-        left.Controls.Add(controlPanel, 0, 4);
-
-        _startButton.Text = "启动内核";
-        _startButton.Width = 100;
-        _stopButton.Text = "停止内核";
-        _stopButton.Width = 100;
-
-        var saveButton = new Button { Text = "保存设置", Width = 100 };
-        var reloadButton = new Button { Text = "刷新 UI", Width = 88 };
-        var clearLogButton = new Button { Text = "清空日志", Width = 88 };
-
-        StyleButton(_startButton, Accent, Color.FromArgb(3, 7, 18));
-        StyleButton(_stopButton, Warning, Color.FromArgb(3, 7, 18));
-        StyleButton(saveButton, Color.FromArgb(71, 85, 105), TextPrimary);
-        StyleButton(reloadButton, Color.FromArgb(51, 65, 85), TextPrimary);
-        StyleButton(clearLogButton, Color.FromArgb(51, 65, 85), TextPrimary);
-
-        controlPanel.Controls.AddRange(new Control[] { _startButton, _stopButton, saveButton, reloadButton, clearLogButton });
-        saveButton.Click += (_, _) => SaveSettingsFromUi(showMessage: true);
-        reloadButton.Click += (_, _) => LoadDashboard();
-        clearLogButton.Click += (_, _) =>
-        {
-            _mihomo.ClearLog();
-            _logBox.Clear();
-        };
-
-        var logPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            RowCount = 2,
-            ColumnCount = 1,
-            BackColor = ShellBackground,
-            Padding = new Padding(0),
-            Margin = new Padding(0, 0, 0, 14)
-        };
-        logPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        logPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        left.Controls.Add(logPanel, 0, 3);
-        left.SetRowSpan(logPanel, 1);
-
-        _statusLabel.AutoSize = true;
-        _statusLabel.Padding = new Padding(12, 7, 12, 7);
-        _statusLabel.Margin = new Padding(0, 0, 0, 10);
-        _statusLabel.BackColor = CardBackground;
-        _statusLabel.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-        logPanel.Controls.Add(_statusLabel, 0, 0);
-
-        _logBox.Dock = DockStyle.Fill;
-        _logBox.Multiline = true;
-        _logBox.ScrollBars = ScrollBars.Vertical;
-        _logBox.ReadOnly = true;
-        _logBox.BorderStyle = BorderStyle.None;
-        _logBox.Font = new Font("Cascadia Mono", 9);
-        _logBox.BackColor = InputBackground;
-        _logBox.ForeColor = Color.FromArgb(203, 213, 225);
-        _logBox.Margin = new Padding(0);
-        logPanel.Controls.Add(_logBox, 0, 1);
-
         _webView.Dock = DockStyle.Fill;
-        root.Panel2.Controls.Add(_webView);
-    }
-
-    private static void AddPathRow(TableLayoutPanel panel, string labelText, TextBox textBox, EventHandler browseHandler)
-    {
-        AddTextRow(panel, labelText, textBox);
-        var browseButton = new Button { Text = "...", Width = 36, Height = 28, Margin = new Padding(6, 0, 0, 10) };
-        StyleButton(browseButton, Color.FromArgb(51, 65, 85), TextPrimary);
-        browseButton.Click += browseHandler;
-        panel.Controls.Add(browseButton, 2, panel.RowCount - 1);
-    }
-
-    private static void AddTextRow(TableLayoutPanel panel, string labelText, TextBox textBox, bool password = false)
-    {
-        var row = panel.RowCount++;
-        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var label = new Label
-        {
-            Text = labelText,
-            AutoSize = true,
-            ForeColor = TextSecondary,
-            Font = new Font("Segoe UI", 9, FontStyle.Bold),
-            Margin = new Padding(0, 8, 0, 5)
-        };
-        panel.Controls.Add(label, 0, row);
-        panel.SetColumnSpan(label, 3);
-
-        textBox.Dock = DockStyle.Top;
-        textBox.UseSystemPasswordChar = password;
-        textBox.BorderStyle = BorderStyle.FixedSingle;
-        textBox.BackColor = InputBackground;
-        textBox.ForeColor = TextPrimary;
-        textBox.Font = new Font("Segoe UI", 9);
-        textBox.Height = 28;
-        textBox.Margin = new Padding(0, 0, 0, 10);
-        panel.Controls.Add(textBox, 0, panel.RowCount++);
-        panel.SetColumnSpan(textBox, 2);
-    }
-
-    private static void StyleButton(Button button, Color backColor, Color foreColor)
-    {
-        button.Height = 32;
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = 0;
-        button.BackColor = backColor;
-        button.ForeColor = foreColor;
-        button.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-        button.Margin = new Padding(0, 0, 8, 8);
-        button.Cursor = Cursors.Hand;
-    }
-
-    private static void StyleCheckBox(CheckBox checkBox)
-    {
-        checkBox.AutoSize = true;
-        checkBox.ForeColor = TextPrimary;
-        checkBox.Font = new Font("Segoe UI", 9);
-        checkBox.Margin = new Padding(0, 6, 0, 0);
+        Controls.Add(_webView);
     }
 
     private void BindEvents()
     {
-        _startButton.Click += (_, _) => StartCore();
-        _stopButton.Click += (_, _) => StopCore();
         _mihomo.StatusChanged += (_, _) => BeginInvoke(new Action(RefreshStatus));
-        _mihomo.LogReceived += (_, text) =>
-        {
-            if (!string.IsNullOrEmpty(text))
-            {
-                BeginInvoke(new Action(() =>
-                {
-                    _logBox.AppendText(text);
-                    _logBox.SelectionStart = _logBox.TextLength;
-                    _logBox.ScrollToCaret();
-                }));
-            }
-        };
-        _autostartBox.CheckedChanged += (_, _) =>
-        {
-            try
-            {
-                AutostartManager.SetEnabled(_autostartBox.Checked);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ex.Message, "开机自启设置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        };
+        _mihomo.LogReceived += (_, _) => BeginInvoke(new Action(SendStateToDashboard));
     }
 
     private NotifyIcon CreateTrayIcon()
@@ -346,6 +97,12 @@ public sealed class MainForm : Form
             await _webView.EnsureCoreWebView2Async();
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+            _webView.CoreWebView2.NavigationCompleted += async (_, _) =>
+            {
+                await InjectCorePanelAsync();
+                SendStateToDashboard();
+            };
             LoadDashboard();
         }
         catch (Exception ex)
@@ -367,38 +124,357 @@ public sealed class MainForm : Form
         _webView.CoreWebView2.Navigate(uri.ToString());
     }
 
-    private void LoadSettingsToUi()
+    private async Task InjectCorePanelAsync()
     {
-        _corePathBox.Text = _settings.CorePath;
-        _configPathBox.Text = _settings.ConfigPath;
-        _apiUrlBox.Text = _settings.DashboardApiUrl;
-        _secretBox.Text = _settings.Secret;
-        _startCoreBox.Checked = _settings.StartCoreOnLaunch;
-        _minimizeToTrayBox.Checked = _settings.MinimizeToTray;
-        _autostartBox.Checked = AutostartManager.IsEnabled();
+        if (_webView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        const string script = """
+(() => {
+  if (window.__mihomoControlInstalled) return;
+  window.__mihomoControlInstalled = true;
+
+  const css = document.createElement('style');
+  css.textContent = `
+    #mihomo-core-widget {
+      position: fixed;
+      top: 12px;
+      right: 86px;
+      z-index: 2147483647;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #171717;
+    }
+    #mihomo-core-widget * { box-sizing: border-box; }
+    #mihomo-core-widget .mc-pill {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px 0 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, .08);
+      background: rgba(255, 255, 255, .88);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .10);
+      backdrop-filter: blur(16px);
+    }
+    #mihomo-core-widget .mc-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, .16);
+    }
+    #mihomo-core-widget[data-running="true"] .mc-dot {
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, .16);
+    }
+    #mihomo-core-widget .mc-title {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    #mihomo-core-widget .mc-sub {
+      color: #737373;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    #mihomo-core-widget button {
+      height: 28px;
+      border: 0;
+      border-radius: 9px;
+      padding: 0 11px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #18181b;
+      color: #fff;
+    }
+    #mihomo-core-widget button.secondary {
+      background: #f4f4f5;
+      color: #27272a;
+    }
+    #mihomo-core-widget button.danger {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+    #mihomo-core-widget button.icon {
+      width: 28px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      background: transparent;
+      color: #52525b;
+    }
+    #mihomo-core-widget .mc-panel {
+      display: none;
+      width: min(420px, calc(100vw - 32px));
+      margin-top: 10px;
+      margin-left: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(15, 23, 42, .08);
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 18px 55px rgba(15, 23, 42, .18);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+    #mihomo-core-widget[data-open="true"] .mc-panel { display: block; }
+    #mihomo-core-widget .mc-section {
+      padding: 14px;
+      border-top: 1px solid #f1f5f9;
+    }
+    #mihomo-core-widget .mc-section:first-child { border-top: 0; }
+    #mihomo-core-widget label {
+      display: block;
+      margin-bottom: 6px;
+      color: #71717a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    #mihomo-core-widget .mc-field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    #mihomo-core-widget input[type="text"] {
+      width: 100%;
+      height: 34px;
+      border: 1px solid #e4e4e7;
+      border-radius: 10px;
+      padding: 0 10px;
+      outline: none;
+      background: #fafafa;
+      color: #18181b;
+      font-size: 12px;
+    }
+    #mihomo-core-widget .mc-options {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+      color: #3f3f46;
+      font-size: 12px;
+    }
+    #mihomo-core-widget .mc-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: inherit;
+      font-weight: 600;
+    }
+    #mihomo-core-widget .mc-log {
+      max-height: 160px;
+      overflow: auto;
+      margin: 0;
+      padding: 10px;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #dbeafe;
+      font: 11px/1.45 "Cascadia Mono", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+    #mihomo-core-widget .mc-toast {
+      display: none;
+      margin: 10px 14px 0;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #ecfeff;
+      color: #0e7490;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    #mihomo-core-widget .mc-toast.show { display: block; }
+  `;
+  document.head.appendChild(css);
+
+  const root = document.createElement('div');
+  root.id = 'mihomo-core-widget';
+  root.innerHTML = `
+    <div class="mc-pill">
+      <span class="mc-dot"></span>
+      <span class="mc-title">Mihomo Core</span>
+      <span class="mc-sub" data-role="status">未运行</span>
+      <button data-action="start">启动</button>
+      <button class="danger" data-action="stop">停止</button>
+      <button class="icon" data-action="toggle" title="内核设置">⚙</button>
+    </div>
+    <div class="mc-panel">
+      <div class="mc-section">
+        <label>内核路径</label>
+        <div class="mc-field">
+          <input type="text" data-field="corePath" />
+          <button class="secondary" data-action="browseCore">选择</button>
+        </div>
+        <label>配置文件</label>
+        <div class="mc-field">
+          <input type="text" data-field="configPath" />
+          <button class="secondary" data-action="browseConfig">选择</button>
+        </div>
+        <label>API 地址</label>
+        <div class="mc-field">
+          <input type="text" data-field="apiUrl" />
+          <button class="secondary" data-action="reload">刷新 UI</button>
+        </div>
+        <label>Secret</label>
+        <div class="mc-field">
+          <input type="text" data-field="secret" />
+          <button data-action="save">保存</button>
+        </div>
+        <div class="mc-options">
+          <label><input type="checkbox" data-field="startCoreOnLaunch" /> 启动软件时自动启动内核</label>
+          <label><input type="checkbox" data-field="minimizeToTray" /> 关闭窗口时最小化到托盘</label>
+          <label><input type="checkbox" data-field="autostart" /> 开机自启</label>
+        </div>
+      </div>
+      <div class="mc-section">
+        <label>内核日志</label>
+        <pre class="mc-log" data-role="log">暂无日志</pre>
+      </div>
+      <div class="mc-toast" data-role="toast"></div>
+    </div>
+  `;
+  document.body.appendChild(root);
+
+  const post = (message) => window.chrome?.webview?.postMessage(message);
+  const collect = () => ({
+    type: 'save',
+    corePath: root.querySelector('[data-field="corePath"]').value,
+    configPath: root.querySelector('[data-field="configPath"]').value,
+    apiUrl: root.querySelector('[data-field="apiUrl"]').value,
+    secret: root.querySelector('[data-field="secret"]').value,
+    startCoreOnLaunch: root.querySelector('[data-field="startCoreOnLaunch"]').checked,
+    minimizeToTray: root.querySelector('[data-field="minimizeToTray"]').checked,
+    autostart: root.querySelector('[data-field="autostart"]').checked
+  });
+
+  root.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+
+    if (action === 'toggle') {
+      root.dataset.open = root.dataset.open === 'true' ? 'false' : 'true';
+      return;
+    }
+    if (action === 'save') return post(collect());
+    if (action === 'start') return post({ ...collect(), type: 'start' });
+    if (action === 'stop') return post({ type: 'stop' });
+    if (action === 'reload') return post({ ...collect(), type: 'reload' });
+    if (action === 'browseCore') return post({ type: 'browseCore' });
+    if (action === 'browseConfig') return post({ type: 'browseConfig' });
+  });
+
+  window.__mihomoControlSetState = (state) => {
+    root.dataset.running = state.isRunning ? 'true' : 'false';
+    root.querySelector('[data-role="status"]').textContent = state.isRunning
+      ? `运行中${state.processId ? ` · PID ${state.processId}` : ''}`
+      : '未运行';
+    root.querySelector('[data-action="start"]').disabled = state.isRunning;
+    root.querySelector('[data-action="stop"]').disabled = !state.isRunning;
+    root.querySelector('[data-field="corePath"]').value = state.corePath ?? '';
+    root.querySelector('[data-field="configPath"]').value = state.configPath ?? '';
+    root.querySelector('[data-field="apiUrl"]').value = state.apiUrl ?? '';
+    root.querySelector('[data-field="secret"]').value = state.secret ?? '';
+    root.querySelector('[data-field="startCoreOnLaunch"]').checked = !!state.startCoreOnLaunch;
+    root.querySelector('[data-field="minimizeToTray"]').checked = !!state.minimizeToTray;
+    root.querySelector('[data-field="autostart"]').checked = !!state.autostart;
+    root.querySelector('[data-role="log"]').textContent = state.logText || '暂无日志';
+  };
+
+  window.__mihomoControlNotice = (message) => {
+    const toast = root.querySelector('[data-role="toast"]');
+    toast.textContent = message;
+    toast.classList.add('show');
+    window.clearTimeout(window.__mihomoControlNoticeTimer);
+    window.__mihomoControlNoticeTimer = window.setTimeout(() => toast.classList.remove('show'), 2400);
+  };
+})();
+""";
+
+        await _webView.CoreWebView2.ExecuteScriptAsync(script);
     }
 
-    private void SaveSettingsFromUi(bool showMessage)
+    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        _settings.CorePath = _corePathBox.Text.Trim();
-        _settings.ConfigPath = _configPathBox.Text.Trim();
-        _settings.DashboardApiUrl = _apiUrlBox.Text.Trim();
-        _settings.Secret = _secretBox.Text;
-        _settings.StartCoreOnLaunch = _startCoreBox.Checked;
-        _settings.MinimizeToTray = _minimizeToTrayBox.Checked;
+        try
+        {
+            using var document = JsonDocument.Parse(e.WebMessageAsJson);
+            var root = document.RootElement;
+            var type = root.GetProperty("type").GetString();
+
+            switch (type)
+            {
+                case "save":
+                    SaveSettingsFromMessage(root, showMessage: true);
+                    break;
+                case "start":
+                    SaveSettingsFromMessage(root, showMessage: false);
+                    StartCore();
+                    break;
+                case "stop":
+                    StopCore();
+                    break;
+                case "reload":
+                    SaveSettingsFromMessage(root, showMessage: false);
+                    LoadDashboard();
+                    break;
+                case "browseCore":
+                    BrowseCorePath();
+                    break;
+                case "browseConfig":
+                    BrowseConfigPath();
+                    break;
+            }
+
+            SendStateToDashboard();
+        }
+        catch (Exception ex)
+        {
+            await ShowDashboardNoticeAsync($"操作失败：{ex.Message}");
+        }
+    }
+
+    private void SaveSettingsFromMessage(JsonElement root, bool showMessage)
+    {
+        _settings.CorePath = GetString(root, "corePath", _settings.CorePath).Trim();
+        _settings.ConfigPath = GetString(root, "configPath", _settings.ConfigPath).Trim();
+        _settings.DashboardApiUrl = GetString(root, "apiUrl", _settings.DashboardApiUrl).Trim();
+        _settings.Secret = GetString(root, "secret", _settings.Secret);
+        _settings.StartCoreOnLaunch = GetBool(root, "startCoreOnLaunch", _settings.StartCoreOnLaunch);
+        _settings.MinimizeToTray = GetBool(root, "minimizeToTray", _settings.MinimizeToTray);
         _settings.Save();
-        LoadDashboard();
+
+        if (root.TryGetProperty("autostart", out var autostart) && autostart.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            AutostartManager.SetEnabled(autostart.GetBoolean());
+        }
 
         if (showMessage)
         {
-            MessageBox.Show(this, "设置已保存。", "Mihomo Dashboard", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _ = ShowDashboardNoticeAsync("设置已保存。");
         }
+    }
+
+    private static string GetString(JsonElement root, string propertyName, string fallback)
+    {
+        return root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? fallback
+            : fallback;
+    }
+
+    private static bool GetBool(JsonElement root, string propertyName, bool fallback)
+    {
+        return root.TryGetProperty(propertyName, out var property) && property.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? property.GetBoolean()
+            : fallback;
     }
 
     private void StartCore()
     {
-        SaveSettingsFromUi(showMessage: false);
-
         try
         {
             _mihomo.Start(_settings);
@@ -406,6 +482,10 @@ public sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SendStateToDashboard();
         }
     }
 
@@ -419,49 +499,61 @@ public sealed class MainForm : Form
         {
             MessageBox.Show(this, ex.Message, "停止失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+        finally
+        {
+            SendStateToDashboard();
+        }
     }
 
     private void RefreshStatus()
     {
         var running = _mihomo.IsRunning;
-        _statusLabel.Text = running
-            ? $"状态：运行中  PID：{_mihomo.ProcessId}"
-            : "状态：未运行";
-        _statusLabel.ForeColor = running ? Success : Warning;
-        _startButton.Enabled = !running;
-        _stopButton.Enabled = running;
         _trayIcon.Text = running ? "Mihomo Dashboard - 运行中" : "Mihomo Dashboard - 未运行";
+        SendStateToDashboard();
     }
 
-    private void ApplySplitLayout()
+    private void SendStateToDashboard()
     {
-        if (_rootSplit is null || _rootSplit.Width <= 0)
+        if (_webView.CoreWebView2 is null)
         {
             return;
         }
 
-        const int panel1Min = 300;
-        const int panel2Min = 420;
-        const int desiredDistance = 360;
-
-        if (_rootSplit.Width <= panel1Min + panel2Min)
+        var state = new
         {
-            return;
-        }
-
-        _rootSplit.Panel1MinSize = panel1Min;
-        _rootSplit.Panel2MinSize = panel2Min;
-
-        var maxDistance = _rootSplit.Width - panel2Min;
-        var distance = Math.Min(Math.Max(desiredDistance, panel1Min), maxDistance);
-
-        if (_rootSplit.SplitterDistance != distance)
-        {
-            _rootSplit.SplitterDistance = distance;
-        }
+            isRunning = _mihomo.IsRunning,
+            processId = _mihomo.ProcessId,
+            corePath = _settings.CorePath,
+            configPath = _settings.ConfigPath,
+            apiUrl = _settings.DashboardApiUrl,
+            secret = _settings.Secret,
+            startCoreOnLaunch = _settings.StartCoreOnLaunch,
+            minimizeToTray = _settings.MinimizeToTray,
+            autostart = AutostartManager.IsEnabled(),
+            logText = TrimLog(_mihomo.LogText)
+        };
+        var json = JsonSerializer.Serialize(state);
+        _ = _webView.CoreWebView2.ExecuteScriptAsync($"window.__mihomoControlSetState && window.__mihomoControlSetState({json});");
     }
 
-    private void BrowseCorePath(object? sender, EventArgs e)
+    private static string TrimLog(string log)
+    {
+        const int maxLength = 8000;
+        return log.Length <= maxLength ? log : log[^maxLength..];
+    }
+
+    private async Task ShowDashboardNoticeAsync(string message)
+    {
+        if (_webView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        var text = JsonSerializer.Serialize(message);
+        await _webView.CoreWebView2.ExecuteScriptAsync($"window.__mihomoControlNotice ? window.__mihomoControlNotice({text}) : alert({text});");
+    }
+
+    private void BrowseCorePath()
     {
         using var dialog = new OpenFileDialog
         {
@@ -470,11 +562,12 @@ public sealed class MainForm : Form
         };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            _corePathBox.Text = dialog.FileName;
+            _settings.CorePath = dialog.FileName;
+            _settings.Save();
         }
     }
 
-    private void BrowseConfigPath(object? sender, EventArgs e)
+    private void BrowseConfigPath()
     {
         using var dialog = new OpenFileDialog
         {
@@ -483,7 +576,8 @@ public sealed class MainForm : Form
         };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            _configPathBox.Text = dialog.FileName;
+            _settings.ConfigPath = dialog.FileName;
+            _settings.Save();
         }
     }
 

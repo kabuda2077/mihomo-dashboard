@@ -60,4 +60,6 @@ dotnet publish -c Release -r win-x64 --self-contained false
 
 zashboard 本身仍然通过 Clash/Mihomo external-controller API 工作。应用会启动一个本地临时端口来托管 zashboard 静态文件，并默认把 API 地址设置为 `http://127.0.0.1:9090`。
 
-如果 zashboard 首次打开时要求你选择后端，请填写界面左侧的 API 地址和 Secret，保存后点击“刷新 UI”。
+内核启动/停止、路径设置、日志和开机自启控件会集成在 zashboard 页面右上角的 `Mihomo Core` 浮层中。
+
+如果 zashboard 首次打开时要求你选择后端，请在 `Mihomo Core` 浮层里填写 API 地址和 Secret，保存后点击“刷新 UI”。
