@@ -102,14 +102,31 @@ public sealed class WindowCaptionButton : Control
                 g.DrawRectangle(pen, cx - 5, cy - 5, 10, 10);
                 break;
             case WindowCaptionButtonKind.Restore:
-                g.DrawRectangle(pen, cx - 3, cy - 6, 9, 9);
-                g.DrawRectangle(pen, cx - 6, cy - 3, 9, 9);
+                DrawExitFullscreenGlyph(g, pen, cx, cy);
                 break;
             case WindowCaptionButtonKind.Close:
                 g.DrawLine(pen, cx - 5, cy - 5, cx + 5, cy + 5);
                 g.DrawLine(pen, cx + 5, cy - 5, cx - 5, cy + 5);
                 break;
         }
+    }
+
+    private static void DrawExitFullscreenGlyph(Graphics g, Pen pen, float cx, float cy)
+    {
+        const float outer = 7f;
+        const float inner = 2f;
+
+        g.DrawLine(pen, cx - outer, cy - inner, cx - inner, cy - inner);
+        g.DrawLine(pen, cx - inner, cy - outer, cx - inner, cy - inner);
+
+        g.DrawLine(pen, cx + inner, cy - inner, cx + outer, cy - inner);
+        g.DrawLine(pen, cx + inner, cy - outer, cx + inner, cy - inner);
+
+        g.DrawLine(pen, cx - outer, cy + inner, cx - inner, cy + inner);
+        g.DrawLine(pen, cx - inner, cy + inner, cx - inner, cy + outer);
+
+        g.DrawLine(pen, cx + inner, cy + inner, cx + outer, cy + inner);
+        g.DrawLine(pen, cx + inner, cy + inner, cx + inner, cy + outer);
     }
 
     private Color GetBackground()

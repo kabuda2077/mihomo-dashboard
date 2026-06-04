@@ -11,6 +11,7 @@ public sealed class MainForm : Form
 {
     private const int TitleBarHeight = 38;
     private const int ResizeBorder = 8;
+    private const int WmGetMinMaxInfo = 0x0024;
     private const int WmNcLButtonDown = 0x00A1;
     private const int WmNcHitTest = 0x0084;
     private const int HtCaption = 2;
@@ -23,9 +24,10 @@ public sealed class MainForm : Form
     private const int HtBottom = 15;
     private const int HtBottomLeft = 16;
     private const int HtBottomRight = 17;
-    private const int CsDropShadow = 0x00020000;
     private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwcpDoNotRound = 1;
     private const int DwmwcpRound = 2;
+    private static readonly IntPtr MonitorDefaultToNearest = new(2);
 
     private readonly AppSettings _settings;
     private readonly MihomoManager _mihomo = new();
@@ -44,16 +46,6 @@ public sealed class MainForm : Form
     private bool _initialized;
     private bool _startMinimized;
     private bool _startCoreAfterLaunch;
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ClassStyle |= CsDropShadow;
-            return cp;
-        }
-    }
 
     public MainForm(bool startMinimized, bool startCoreAfterLaunch)
     {
@@ -813,7 +805,7 @@ public sealed class MainForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        TryApplyWindowCorners();
+        ApplyWindowCornerPreference();
         UpdateMaximizedBounds();
     }
 
@@ -836,6 +828,7 @@ public sealed class MainForm : Form
                 ? WindowCaptionButtonKind.Restore
                 : WindowCaptionButtonKind.Maximize;
         }
+        ApplyWindowCornerPreference();
 
         if (WindowState != FormWindowState.Minimized)
         {
@@ -850,6 +843,12 @@ public sealed class MainForm : Form
 
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == WmGetMinMaxInfo)
+        {
+            ApplyMaximizedSize(ref m);
+            return;
+        }
+
         if (m.Msg == WmNcHitTest && WindowState == FormWindowState.Normal)
         {
             base.WndProc(ref m);
@@ -876,11 +875,45 @@ public sealed class MainForm : Form
         }
     }
 
-    private void TryApplyWindowCorners()
+    private void ApplyMaximizedSize(ref Message message)
+    {
+        var monitor = MonitorFromWindow(Handle, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero)
+        {
+            base.WndProc(ref message);
+            return;
+        }
+
+        var monitorInfo = new MonitorInfo
+        {
+            Size = Marshal.SizeOf<MonitorInfo>()
+        };
+        if (!GetMonitorInfo(monitor, ref monitorInfo))
+        {
+            base.WndProc(ref message);
+            return;
+        }
+
+        var minMaxInfo = Marshal.PtrToStructure<MinMaxInfo>(message.LParam);
+        var workArea = monitorInfo.WorkArea;
+        var monitorArea = monitorInfo.MonitorArea;
+
+        minMaxInfo.MaxPosition.X = workArea.Left - monitorArea.Left;
+        minMaxInfo.MaxPosition.Y = workArea.Top - monitorArea.Top;
+        minMaxInfo.MaxSize.X = workArea.Right - workArea.Left;
+        minMaxInfo.MaxSize.Y = workArea.Bottom - workArea.Top;
+        minMaxInfo.MaxTrackSize.X = minMaxInfo.MaxSize.X;
+        minMaxInfo.MaxTrackSize.Y = minMaxInfo.MaxSize.Y;
+
+        Marshal.StructureToPtr(minMaxInfo, message.LParam, false);
+        message.Result = IntPtr.Zero;
+    }
+
+    private void ApplyWindowCornerPreference()
     {
         try
         {
-            var preference = DwmwcpRound;
+            var preference = WindowState == FormWindowState.Maximized ? DwmwcpDoNotRound : DwmwcpRound;
             _ = DwmSetWindowAttribute(Handle, DwmwaWindowCornerPreference, ref preference, Marshal.SizeOf<int>());
         }
         catch
@@ -1061,4 +1094,45 @@ public sealed class MainForm : Form
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr handle, int attribute, ref int attributeValue, int attributeSize);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr handle, IntPtr flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo monitorInfo);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PointInfo
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public PointInfo Reserved;
+        public PointInfo MaxSize;
+        public PointInfo MaxPosition;
+        public PointInfo MinTrackSize;
+        public PointInfo MaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RectInfo
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public RectInfo MonitorArea;
+        public RectInfo WorkArea;
+        public int Flags;
+    }
 }
