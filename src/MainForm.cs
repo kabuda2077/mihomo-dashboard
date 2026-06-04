@@ -56,6 +56,7 @@ public sealed class MainForm : Form
         _startMinimized = startMinimized;
         _startCoreAfterLaunch = startCoreAfterLaunch;
         _settings = AppSettings.Load();
+        SyncAutostartSetting();
         _dashboardServer = new DashboardServer(Path.Combine(AppContext.BaseDirectory, "resources", "dashboard"));
         _dashboardUri = _dashboardServer.Start();
 
@@ -587,12 +588,12 @@ public sealed class MainForm : Form
         _settings.Secret = GetString(root, "secret", _settings.Secret);
         _settings.StartCoreOnLaunch = GetBool(root, "startCoreOnLaunch", _settings.StartCoreOnLaunch);
         _settings.MinimizeToTray = GetBool(root, "minimizeToTray", _settings.MinimizeToTray);
-        _settings.Save();
-
         if (root.TryGetProperty("autostart", out var autostart) && autostart.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
-            AutostartManager.SetEnabled(autostart.GetBoolean());
+            _settings.Autostart = autostart.GetBoolean();
+            AutostartManager.SetEnabled(_settings.Autostart);
         }
+        _settings.Save();
 
         if (showMessage)
         {
@@ -710,7 +711,7 @@ public sealed class MainForm : Form
             secret = _settings.Secret,
             startCoreOnLaunch = _settings.StartCoreOnLaunch,
             minimizeToTray = _settings.MinimizeToTray,
-            autostart = AutostartManager.IsEnabled(),
+            autostart = _settings.Autostart,
             logText = TrimLog(_mihomo.LogText)
         };
         var json = JsonSerializer.Serialize(state);
@@ -891,7 +892,7 @@ public sealed class MainForm : Form
         if (!_allowClose && _settings.MinimizeToTray)
         {
             e.Cancel = true;
-            HideToTray();
+            BeginInvoke(new Action(HideToTray));
             return;
         }
 
@@ -900,12 +901,18 @@ public sealed class MainForm : Form
 
     private void HideToTray()
     {
-        Hide();
+        _trayMenu?.Close();
         ShowInTaskbar = false;
+        Hide();
+        if (WindowState == FormWindowState.Minimized)
+        {
+            WindowState = FormWindowState.Normal;
+        }
     }
 
     private void ShowFromTray()
     {
+        _trayMenu?.Close();
         ShowInTaskbar = true;
         Show();
         WindowState = FormWindowState.Normal;
@@ -940,6 +947,22 @@ public sealed class MainForm : Form
         return File.Exists(iconPath)
             ? new Icon(iconPath)
             : Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? (Icon)SystemIcons.Application.Clone();
+    }
+
+    private void SyncAutostartSetting()
+    {
+        var registryEnabled = AutostartManager.IsEnabled();
+        if (_settings.Autostart)
+        {
+            AutostartManager.SetEnabled(true);
+            return;
+        }
+
+        if (registryEnabled)
+        {
+            _settings.Autostart = true;
+            _settings.Save();
+        }
     }
 
     [DllImport("user32.dll")]

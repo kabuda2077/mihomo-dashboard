@@ -109,7 +109,7 @@
                 />
                 <button
                   class="btn btn-primary btn-sm"
-                  @click="post(collect())"
+                  @click="saveSettings"
                 >
                   保存
                 </button>
@@ -123,6 +123,7 @@
                   v-model="settings.startCoreOnLaunch"
                   class="toggle toggle-sm"
                   type="checkbox"
+                  @change="saveSettings"
                 />
               </label>
               <label class="flex items-center justify-between gap-3">
@@ -131,6 +132,7 @@
                   v-model="settings.minimizeToTray"
                   class="toggle toggle-sm"
                   type="checkbox"
+                  @change="saveSettings"
                 />
               </label>
               <label class="flex items-center justify-between gap-3">
@@ -139,6 +141,7 @@
                   v-model="settings.autostart"
                   class="toggle toggle-sm"
                   type="checkbox"
+                  @change="saveSettings"
                 />
               </label>
             </div>
@@ -215,6 +218,10 @@ const collect = () => ({
 
 const startCore = () => {
   post({ ...collect(), type: 'start' })
+}
+
+const saveSettings = () => {
+  post(collect())
 }
 
 const setState = (state: CoreState) => {
