@@ -36,6 +36,10 @@ public sealed class MainForm : Form
     private readonly WebView2 _webView = new();
     private WindowCaptionButton? _maximizeButton;
     private TrayMenuForm? _trayMenu;
+    private Rectangle _trayRestoreBounds;
+    private FormWindowState _trayRestoreWindowState = FormWindowState.Normal;
+    private bool _hiddenToTray;
+    private bool _trayTransitionInProgress;
     private bool _allowClose;
     private bool _initialized;
     private bool _startMinimized;
@@ -65,6 +69,7 @@ public sealed class MainForm : Form
         BackColor = Color.FromArgb(244, 244, 245);
         MinimumSize = new Size(1120, 720);
         Size = new Size(1360, 840);
+        _trayRestoreBounds = Bounds;
         StartPosition = FormStartPosition.CenterScreen;
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
@@ -211,7 +216,11 @@ public sealed class MainForm : Form
         };
         icon.MouseUp += (_, e) =>
         {
-            if (e.Button == MouseButtons.Right)
+            if (e.Button == MouseButtons.Left)
+            {
+                ShowFromTray();
+            }
+            else if (e.Button == MouseButtons.Right)
             {
                 ShowTrayMenu(Cursor.Position);
             }
@@ -229,7 +238,7 @@ public sealed class MainForm : Form
         {
             new TrayMenuItem("显示窗口", ShowFromTray),
             new TrayMenuItem("启动内核", StartCore, Enabled: !isRunning),
-            new TrayMenuItem("停止内核", StopCore, Enabled: isRunning),
+            new TrayMenuItem("停止内核", () => StopCore(showTrayNotification: true), Enabled: isRunning),
             TrayMenuItem.Separator(),
             new TrayMenuItem("退出", ExitApplication)
         });
@@ -640,9 +649,19 @@ public sealed class MainForm : Form
 
     private void StopCore()
     {
+        StopCore(showTrayNotification: false);
+    }
+
+    private void StopCore(bool showTrayNotification)
+    {
+        var wasRunning = _mihomo.IsRunning;
         try
         {
             _mihomo.Stop();
+            if (showTrayNotification && wasRunning)
+            {
+                _trayIcon.ShowBalloonTip(1800, "Mihomo Dashboard", "内核已关闭", ToolTipIcon.Info);
+            }
         }
         catch (Exception ex)
         {
@@ -803,6 +822,7 @@ public sealed class MainForm : Form
         base.OnLocationChanged(e);
         if (WindowState == FormWindowState.Normal)
         {
+            RememberTrayRestoreState();
             UpdateMaximizedBounds();
         }
     }
@@ -817,7 +837,12 @@ public sealed class MainForm : Form
                 : WindowCaptionButtonKind.Maximize;
         }
 
-        if (WindowState == FormWindowState.Minimized && _settings.MinimizeToTray)
+        if (WindowState != FormWindowState.Minimized)
+        {
+            RememberTrayRestoreState();
+        }
+
+        if (WindowState == FormWindowState.Minimized && _settings.MinimizeToTray && !_trayTransitionInProgress)
         {
             HideToTray();
         }
@@ -887,12 +912,27 @@ public sealed class MainForm : Form
         return HtClient;
     }
 
+    private void RememberTrayRestoreState()
+    {
+        if (!Visible || WindowState == FormWindowState.Minimized)
+        {
+            return;
+        }
+
+        _trayRestoreWindowState = WindowState == FormWindowState.Maximized
+            ? FormWindowState.Maximized
+            : FormWindowState.Normal;
+        _trayRestoreBounds = WindowState == FormWindowState.Normal
+            ? Bounds
+            : RestoreBounds;
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         if (!_allowClose && _settings.MinimizeToTray)
         {
             e.Cancel = true;
-            BeginInvoke(new Action(HideToTray));
+            HideToTray();
             return;
         }
 
@@ -901,22 +941,70 @@ public sealed class MainForm : Form
 
     private void HideToTray()
     {
-        _trayMenu?.Close();
-        ShowInTaskbar = false;
-        Hide();
-        if (WindowState == FormWindowState.Minimized)
+        if (_hiddenToTray || _trayTransitionInProgress)
         {
-            WindowState = FormWindowState.Normal;
+            return;
+        }
+
+        RememberTrayRestoreState();
+        _trayTransitionInProgress = true;
+        _trayMenu?.Close();
+
+        var previousOpacity = Opacity;
+        try
+        {
+            Opacity = 0;
+            ShowInTaskbar = false;
+            Hide();
+            if (WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+
+            _hiddenToTray = true;
+        }
+        finally
+        {
+            Opacity = previousOpacity;
+            _trayTransitionInProgress = false;
         }
     }
 
     private void ShowFromTray()
     {
         _trayMenu?.Close();
-        ShowInTaskbar = true;
-        Show();
-        WindowState = FormWindowState.Normal;
-        Activate();
+        if (Visible && WindowState != FormWindowState.Minimized)
+        {
+            Activate();
+            return;
+        }
+
+        _trayTransitionInProgress = true;
+        var previousOpacity = Opacity;
+        try
+        {
+            Opacity = 0;
+            WindowState = FormWindowState.Normal;
+            if (!_trayRestoreBounds.IsEmpty)
+            {
+                Bounds = _trayRestoreBounds;
+            }
+
+            ShowInTaskbar = true;
+            Show();
+            if (_trayRestoreWindowState == FormWindowState.Maximized)
+            {
+                WindowState = FormWindowState.Maximized;
+            }
+
+            _hiddenToTray = false;
+            Activate();
+            BeginInvoke(new Action(() => Opacity = previousOpacity));
+        }
+        finally
+        {
+            _trayTransitionInProgress = false;
+        }
     }
 
     private void ExitApplication()
