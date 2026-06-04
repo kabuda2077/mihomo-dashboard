@@ -1,5 +1,4 @@
 import { NOT_CONNECTED, PROXY_CHAIN_DIRECTION, PROXY_TYPE, ROUTE_NAME } from '@/constant'
-import { showNotification } from '@/helper/notification'
 import { timeSaved } from '@/store/overview'
 import { hiddenGroupMap, proxyMap } from '@/store/proxies'
 import {
@@ -182,11 +181,4 @@ export const isHiddenGroup = (group: string) => {
   }
 
   return proxyMap.value[group]?.hidden
-}
-
-export const handlerUpgradeSuccess = () => {
-  showNotification({
-    content: 'upgradeSuccess',
-    type: 'alert-success',
-  })
 }

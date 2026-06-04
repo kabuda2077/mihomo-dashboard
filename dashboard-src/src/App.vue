@@ -3,12 +3,7 @@ import { computed, onMounted, ref, type Ref, watch } from 'vue'
 import { RouterView } from 'vue-router'
 import { useKeyboard } from './composables/keyboard'
 import { EMOJIS, FONTS } from './constant'
-import {
-  autoImportSettings,
-  autoSyncSettings,
-  importSettingsFromUrl,
-  syncSettingsFromCore,
-} from './helper/autoImportSettings'
+import { autoImportSettings, importSettingsFromUrl } from './helper/autoImportSettings'
 import { backgroundImage } from './helper/indexeddb'
 import { initNotification } from './helper/notification'
 import { getBackendFromUrl, isPreferredDark } from './helper/utils'
@@ -109,14 +104,6 @@ autoSwitchToURLBackendIfExists()
 onMounted(async () => {
   if (autoImportSettings.value) {
     await importSettingsFromUrl()
-  }
-
-  if (autoSyncSettings.value) {
-    try {
-      await syncSettingsFromCore()
-    } catch (e) {
-      console.error('Failed to auto-sync settings on app load:', e)
-    }
   }
 
   watch(

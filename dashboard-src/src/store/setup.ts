@@ -1,6 +1,5 @@
 import type { Backend } from '@/types'
 import { useStorage } from '@vueuse/core'
-import { isEqual, omit } from 'lodash'
 import { v4 as uuid } from 'uuid'
 import { computed } from 'vue'
 import { sourceIPLabelList } from './settings'
@@ -30,12 +29,26 @@ export const switchActiveBackend = (direction: 1 | -1) => {
   return nextBackend
 }
 
+const isSameBackendEndpoint = (saved: Backend, backend: Omit<Backend, 'uuid'>) => {
+  return (
+    saved.protocol === backend.protocol &&
+    saved.host === backend.host &&
+    saved.port === backend.port &&
+    saved.secondaryPath === backend.secondaryPath &&
+    saved.password === backend.password
+  )
+}
+
 export const addBackend = (backend: Omit<Backend, 'uuid'>) => {
-  const currentEnd = backendList.value.find((end) => {
-    return isEqual(omit(end, 'uuid'), backend)
-  })
+  const matchingBackends = backendList.value.filter((end) => isSameBackendEndpoint(end, backend))
+  const currentEnd = matchingBackends[0]
 
   if (currentEnd) {
+    Object.assign(currentEnd, backend)
+    if (matchingBackends.length > 1) {
+      const duplicateIds = new Set(matchingBackends.slice(1).map((end) => end.uuid))
+      backendList.value = backendList.value.filter((end) => !duplicateIds.has(end.uuid))
+    }
     activeUuid.value = currentEnd.uuid
     return
   }

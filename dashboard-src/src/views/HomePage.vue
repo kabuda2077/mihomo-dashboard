@@ -101,7 +101,6 @@ import { isBackendAvailable } from '@/api'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import SideBar from '@/components/sidebar/SideBar.vue'
 import { dockTop } from '@/composables/paddingViews'
-import { useSettings } from '@/composables/settings'
 import { useSwipeRouter } from '@/composables/swipe'
 import { PROXY_TAB_TYPE, ROUTE_ICON_MAP, RULE_TAB_TYPE } from '@/constant'
 import { renderRoutes } from '@/helper'
@@ -242,8 +241,4 @@ watch(documentVisible, () => {
   if (documentVisible.value !== 'visible') return
   fetchProxies()
 })
-
-const { checkUIUpdate } = useSettings()
-
-checkUIUpdate()
 </script>

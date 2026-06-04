@@ -3,9 +3,6 @@
     class="bg-base-200/50 h-full w-full items-center justify-center overflow-auto sm:flex"
     @keydown.enter="handleSubmit(form)"
   >
-    <div class="absolute top-4 right-4 max-sm:hidden">
-      <DashboardSettings />
-    </div>
     <div class="absolute right-4 bottom-4 max-sm:hidden">
       <LanguageSelect />
     </div>
@@ -122,9 +119,6 @@
       <div class="mt-4 sm:hidden">
         <LanguageSelect />
       </div>
-      <div class="absolute top-2 right-2 sm:hidden">
-        <DashboardSettings />
-      </div>
     </div>
 
     <!-- 编辑Backend Modal -->
@@ -136,12 +130,10 @@
 </template>
 
 <script setup lang="ts">
-import DashboardSettings from '@/components/common/DashboardSettings.vue'
 import TextInput from '@/components/common/TextInput.vue'
 import EditBackendModal from '@/components/settings/backend/EditBackendModal.vue'
 import LanguageSelect from '@/components/settings/general/LanguageSelect.vue'
 import { ROUTE_NAME } from '@/constant'
-import { syncSettingsFromCore } from '@/helper/autoImportSettings'
 import { showNotification } from '@/helper/notification'
 import { getBackendFromUrl, getLabelFromBackend, getUrlFromBackend } from '@/helper/utils'
 import router from '@/router'
@@ -236,11 +228,6 @@ const handleSubmit = async (form: Omit<Backend, 'uuid'>, quiet = false) => {
     }
 
     addBackend(form)
-    const synced = await syncSettingsFromCore()
-    if (synced) {
-      return
-    }
-
     router.push({ name: ROUTE_NAME.proxies })
   } catch (e) {
     if (!quiet) {

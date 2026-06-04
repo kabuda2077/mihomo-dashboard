@@ -6,19 +6,6 @@
     <div class="settings-grid">
       <LanguageSelect v-if="isVisibleLanguage" />
       <div
-        v-if="false && isVisibleAutoUpgrade"
-        class="setting-item"
-      >
-        <div class="setting-item-label">
-          {{ $t('autoUpgradeDashboard') }}
-        </div>
-        <input
-          class="toggle"
-          type="checkbox"
-          v-model="autoUpgradeDashboard"
-        />
-      </div>
-      <div
         v-if="isVisibleAutoDisconnectIdleUDP"
         class="setting-item"
       >
@@ -163,7 +150,6 @@ import { isMiddleScreen } from '@/helper/utils'
 import {
   autoDisconnectIdleUDP,
   autoDisconnectIdleUDPTime,
-  autoUpgradeDashboard,
   disablePullToRefresh,
   displayAllFeatures,
   IPInfoAPI,
@@ -180,7 +166,6 @@ const k = GENERAL_ITEM_KEYS
 const isVisibleLanguage = useIsSettingVisible(k.language)
 const isVisibleShortcutsSetting = useIsSettingVisible(k.keyboardShortcuts)
 const isVisibleShortcuts = computed(() => isVisibleShortcutsSetting.value && !isMiddleScreen.value)
-const isVisibleAutoUpgrade = useIsSettingVisible(k.autoUpgradeDashboard)
 const isVisibleAutoDisconnectIdleUDP = useIsSettingVisible(k.autoDisconnectIdleUDP)
 const isVisibleAutoDisconnectIdleUDPTime = useIsSettingVisible(k.autoDisconnectIdleUDPTime)
 const isVisibleIPInfoAPI = useIsSettingVisible(k.IPInfoAPI)
@@ -194,7 +179,6 @@ const hasVisibleGeneralItems = computed(() => {
   return (
     isVisibleLanguage.value ||
     isVisibleShortcuts.value ||
-    isVisibleAutoUpgrade.value ||
     isVisibleAutoDisconnectIdleUDP.value ||
     (autoDisconnectIdleUDP.value && isVisibleAutoDisconnectIdleUDPTime.value) ||
     isVisibleIPInfoAPI.value ||

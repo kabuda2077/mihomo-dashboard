@@ -11,12 +11,6 @@ type HostWindow = Window & {
   __mihomoApplyBackend?: (state: HostState) => void
 }
 
-const disableSelfManagedUpdates = () => {
-  localStorage.setItem('config/auto-upgrade', 'false')
-  localStorage.setItem('config/check-upgrade-core', 'false')
-  localStorage.setItem('config/auto-upgrade-core', 'false')
-}
-
 const normalizePath = (pathname: string) => {
   const path = pathname.replace(/\/$/, '')
   return path === '' || path === '/' ? '' : path
@@ -33,7 +27,7 @@ const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefine
       port: url.port || (url.protocol === 'https:' ? '443' : '80'),
       secondaryPath: normalizePath(url.pathname),
       password: secret || '',
-      label: 'Mihomo Dashboard',
+      label: '本机内核',
       disableUpgradeCore: true,
     } satisfies Omit<Backend, 'uuid'>
   } catch {
@@ -46,7 +40,6 @@ const applyBackend = (backend: Omit<Backend, 'uuid'> | null) => {
   addBackend(backend)
 }
 
-disableSelfManagedUpdates()
 applyBackend(getBackendFromUrl())
 
 ;(window as HostWindow).__mihomoApplyBackend = (state) => {

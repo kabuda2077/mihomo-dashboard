@@ -1,8 +1,7 @@
-import { MIHOMO, MIHOMO_CHANNEL, ROUTE_NAME } from '@/constant'
+import { MIHOMO, ROUTE_NAME } from '@/constant'
 import { showNotification } from '@/helper/notification'
 import { getUrlFromBackend } from '@/helper/utils'
 import router from '@/router'
-import { autoUpgradeCore, checkUpgradeCore } from '@/store/settings'
 import { activeBackend, activeUuid } from '@/store/setup'
 import type {
   Backend,
@@ -25,7 +24,7 @@ axios.interceptors.request.use((config) => {
   return config
 })
 
-const ignoreNotificationUrls = ['/delay', '/weights', '/storage/zashboard']
+const ignoreNotificationUrls = ['/delay', '/weights']
 
 axios.interceptors.response.use(
   null,
@@ -60,7 +59,6 @@ axios.interceptors.response.use(
 )
 
 export const version = ref()
-export const isCoreUpdateAvailable = ref(false)
 export const fetchVersionAPI = () => {
   return axios.get<{ version: string }>('/version')
 }
@@ -90,13 +88,6 @@ watch(
       const { data } = await fetchVersionAPI()
 
       version.value = data?.version || ''
-      if (isSingBox.value || !checkUpgradeCore.value || activeBackend.value?.disableUpgradeCore)
-        return
-      isCoreUpdateAvailable.value = await fetchBackendUpdateAvailableAPI()
-
-      if (isCoreUpdateAvailable.value && autoUpgradeCore.value) {
-        upgradeCoreAPI('auto')
-      }
     }
   },
   { immediate: true },
@@ -220,50 +211,14 @@ export const reloadConfigsAPI = () => {
   return axios.put('/configs?reload=true', { path: '', payload: '' })
 }
 
-export const updateConfigsAPI = (
-  config: { path?: string; payload?: string },
-  force: boolean = false,
-) => {
-  return axios.put(`/configs${force ? '?force=true' : ''}`, {
-    path: config.path || '',
-    payload: config.payload || '',
-  })
-}
-
-export const upgradeUIAPI = () => {
-  return axios.post('/upgrade/ui')
-}
-
 export const updateGeoDataAPI = () => {
   return axios.post('/configs/geo')
-}
-
-export const upgradeCoreAPI = (type: 'release' | 'alpha' | 'auto') => {
-  const url = type === 'auto' ? '/upgrade' : `/upgrade?channel=${type}`
-
-  return axios.post(url)
-}
-
-export const restartCoreAPI = () => {
-  return axios.post('/restart')
 }
 
 export const queryDNSAPI = (params: { name: string; type: string }) => {
   return axios.get<DNSQuery>('/dns/query', {
     params,
   })
-}
-
-export const getStorageAPI = () => {
-  return axios.get<Record<string, unknown>>(`/storage/zashboard`)
-}
-
-export const setStorageAPI = (value: Record<string, string>) => {
-  return axios.put(`/storage/zashboard`, value)
-}
-
-export const deleteStorageAPI = () => {
-  return axios.delete(`/storage/zashboard`)
 }
 
 const createWebSocket = <T>(url: string, searchParams?: Record<string, string>) => {
@@ -332,70 +287,4 @@ export const isBackendAvailable = async (backend: Backend, timeout: number = 100
   } finally {
     clearTimeout(timeoutId)
   }
-}
-
-const CACHE_DURATION = 1000 * 60 * 60
-
-interface CacheEntry<T> {
-  timestamp: number
-  version: string
-  data: T
-}
-
-async function fetchWithLocalCache<T>(url: string, version: string): Promise<T> {
-  const cacheKey = 'cache/' + url
-  const cacheRaw = localStorage.getItem(cacheKey)
-
-  if (cacheRaw) {
-    try {
-      const cache: CacheEntry<T> = JSON.parse(cacheRaw)
-      const now = Date.now()
-
-      if (now - cache.timestamp < CACHE_DURATION && cache.version === version) {
-        return cache.data
-      } else {
-        localStorage.removeItem(cacheKey)
-      }
-    } catch (e) {
-      console.warn('Failed to parse cache for', url, e)
-    }
-  }
-
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Fetch failed: ${response.status} ${response.statusText}`)
-  }
-
-  const data: T = await response.json()
-  const newCache: CacheEntry<T> = {
-    timestamp: Date.now(),
-    version,
-    data,
-  }
-
-  localStorage.setItem(cacheKey, JSON.stringify(newCache))
-  return data
-}
-
-export const fetchIsUIUpdateAvailable = async () => {
-  const { tag_name } = await fetchWithLocalCache<{ tag_name: string }>(
-    'https://api.github.com/repos/Zephyruso/zashboard/releases/latest',
-    zashboardVersion.value,
-  )
-
-  return Boolean(tag_name && tag_name !== `v${zashboardVersion.value}`)
-}
-
-const check = async (url: string, versionNumber: string) => {
-  const { assets } = await fetchWithLocalCache<{ assets: { name: string }[] }>(url, versionNumber)
-  const alreadyLatest = assets.some(({ name }) => name.includes(versionNumber))
-
-  return !alreadyLatest
-}
-
-export const fetchBackendUpdateAvailableAPI = async () => {
-  return await check(
-    MIHOMO_CHANNEL[mihomo.value?.[0] ?? MIHOMO.Meta].check_update_url,
-    mihomo.value?.[1] ?? version.value,
-  )
 }
