@@ -8,5 +8,8 @@ _tmp_zashboard/
 _tmp_zashboard_source/
 _tmp_zashboard_source.zip
 _build_zashboard/
+dashboard-src/node_modules/
+dashboard-src/dist/
+.pnpm-store/
 config/config.yaml
 cores/*.exe

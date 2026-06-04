@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+@import './styles/framework.css';
+@import './styles/override.css';
+@import './styles/components.css';
+@import './styles/motion.css';
+@import './styles/tooltip.css';
