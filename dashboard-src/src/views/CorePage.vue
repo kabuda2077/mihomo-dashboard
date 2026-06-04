@@ -59,7 +59,7 @@
       </div>
 
       <div class="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-        <section class="base-container p-4 pb-7">
+        <section class="base-container p-4 pb-5">
           <h2 class="mb-4 text-base font-semibold">启动配置</h2>
           <div class="flex flex-col gap-3">
             <label class="form-control">
