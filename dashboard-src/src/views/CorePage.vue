@@ -58,7 +58,7 @@
         {{ notice }}
       </div>
 
-      <div class="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
+      <div class="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
         <section class="base-container p-4 pb-5">
           <h2 class="mb-4 text-base font-semibold">启动配置</h2>
           <div class="flex flex-col gap-3">
@@ -162,9 +162,9 @@
           </div>
         </section>
 
-        <section class="base-container flex min-h-[360px] min-w-0 flex-col p-4 lg:h-full lg:min-h-0">
+        <section class="base-container flex min-h-[360px] min-w-0 flex-col p-4">
           <h2 class="mb-4 text-base font-semibold">内核日志</h2>
-          <pre class="bg-base-300/60 text-base-content/80 h-0 min-h-0 flex-1 overflow-auto rounded-box p-3 text-xs leading-5 whitespace-pre-wrap">{{ runtime.logText || '暂无日志' }}</pre>
+          <pre class="bg-base-300/60 text-base-content/80 h-[376px] max-h-[376px] overflow-auto rounded-box p-3 text-xs leading-5 whitespace-pre-wrap">{{ runtime.logText || '暂无日志' }}</pre>
         </section>
       </div>
     </div>

@@ -32,6 +32,8 @@ public sealed class AppSettings
 
     public static string SettingsPath => Path.Combine(SettingsDirectory, "settings.json");
 
+    public static string WebView2Directory => Path.Combine(SettingsDirectory, "WebView2");
+
     private static string LegacySettingsPath => Path.Combine(LegacySettingsDirectory, "settings.json");
 
     public static AppSettings Load()

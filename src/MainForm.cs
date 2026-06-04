@@ -140,8 +140,8 @@ public sealed class MainForm : Form
         _trayMenu = new TrayMenuForm(new[]
         {
             new TrayMenuItem("显示窗口", ShowFromTray),
-            new TrayMenuItem("启动内核", StartCore, Enabled: !isRunning && !_coreUpgradeInProgress),
-            new TrayMenuItem("重启内核", RestartCore, Enabled: isRunning && !_coreUpgradeInProgress),
+            new TrayMenuItem("启动内核", () => StartCore(showTrayNotification: true), Enabled: !isRunning && !_coreUpgradeInProgress),
+            new TrayMenuItem("重启内核", () => RestartCore(showTrayNotification: true), Enabled: isRunning && !_coreUpgradeInProgress),
             new TrayMenuItem("停止内核", () => StopCore(showTrayNotification: true), Enabled: isRunning && !_coreUpgradeInProgress),
             TrayMenuItem.Separator(),
             new TrayMenuItem("退出", ExitApplication)
@@ -161,7 +161,9 @@ public sealed class MainForm : Form
     {
         try
         {
-            await _webView.EnsureCoreWebView2Async();
+            Directory.CreateDirectory(AppSettings.WebView2Directory);
+            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: AppSettings.WebView2Directory);
+            await _webView.EnsureCoreWebView2Async(environment);
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
@@ -308,7 +310,7 @@ public sealed class MainForm : Form
             : fallback;
     }
 
-    private void StartCore()
+    private void StartCore(bool showTrayNotification = false)
     {
         try
         {
@@ -324,6 +326,11 @@ public sealed class MainForm : Form
             _elevatedRetryPending = !IsRunningAsAdministrator();
             _tunPermissionFailureSeen = false;
             _mihomo.Start(_settings);
+            if (showTrayNotification)
+            {
+                _trayIcon.ShowBalloonTip(1800, "Dashboard", "内核已启动", ToolTipIcon.Info);
+            }
+
             RefreshIconCache();
             _ = WaitForApiAndNotifyAsync();
         }
@@ -365,7 +372,7 @@ public sealed class MainForm : Form
         }
     }
 
-    private void RestartCore()
+    private void RestartCore(bool showTrayNotification = false)
     {
         try
         {
@@ -378,6 +385,10 @@ public sealed class MainForm : Form
             _mihomo.Stop();
             StartCore();
             _ = ShowDashboardNoticeAsync("内核已重启。");
+            if (showTrayNotification)
+            {
+                _trayIcon.ShowBalloonTip(1800, "Dashboard", "内核已重启", ToolTipIcon.Info);
+            }
         }
         catch (Exception ex)
         {
@@ -397,22 +408,31 @@ public sealed class MainForm : Form
         }
 
         var wasRunning = _mihomo.IsRunning;
+        var stoppedForUpgrade = false;
         _coreUpgradeInProgress = true;
         SendStateToDashboard();
         await ShowDashboardNoticeAsync("正在升级内核，请稍候。");
 
         try
         {
-            if (wasRunning)
+            var result = await CoreUpdater.UpgradeLatestAsync(_settings.CorePath, beforeReplace: () =>
             {
-                _mihomo.Stop();
+                if (wasRunning && _mihomo.IsRunning)
+                {
+                    _mihomo.Stop();
+                    stoppedForUpgrade = true;
+                }
+            });
+
+            if (result.IsAlreadyLatest)
+            {
+                await ShowDashboardNoticeAsync($"当前内核已经是最新版本（{result.Version}）。");
+                return;
             }
 
-            var result = await CoreUpdater.UpgradeLatestAsync(_settings.CorePath);
             await ShowDashboardNoticeAsync($"内核已升级到 {result.Version}。");
-            _trayIcon.ShowBalloonTip(2200, "Dashboard", "内核已升级", ToolTipIcon.Info);
 
-            if (wasRunning)
+            if (stoppedForUpgrade)
             {
                 StartCore();
             }
@@ -420,7 +440,7 @@ public sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "升级内核失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            if (wasRunning && !_mihomo.IsRunning)
+            if (stoppedForUpgrade && !_mihomo.IsRunning)
             {
                 StartCore();
             }

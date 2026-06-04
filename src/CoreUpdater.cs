@@ -1,18 +1,20 @@
 using System.IO.Compression;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Dashboard;
 
-public sealed record CoreUpgradeResult(string Version, string AssetName, string BackupPath);
+public sealed record CoreUpgradeResult(string Version, string AssetName, string BackupPath, bool IsAlreadyLatest);
 
 public static class CoreUpdater
 {
     private const string LatestReleaseApi = "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest";
     private const int MaxCoreBackups = 3;
 
-    public static async Task<CoreUpgradeResult> UpgradeLatestAsync(string corePath, CancellationToken cancellationToken = default)
+    public static async Task<CoreUpgradeResult> UpgradeLatestAsync(string corePath, Action? beforeReplace = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(corePath))
         {
@@ -33,6 +35,11 @@ public static class CoreUpdater
         var root = document.RootElement;
         var version = root.TryGetProperty("tag_name", out var tagName) ? tagName.GetString() ?? "latest" : "latest";
         var asset = FindWindowsX64Asset(root.GetProperty("assets"));
+        var installedVersion = await GetInstalledVersionAsync(corePath, cancellationToken);
+        if (IsSameVersion(installedVersion, version))
+        {
+            return new CoreUpgradeResult(version, asset.Name, "", IsAlreadyLatest: true);
+        }
 
         var tempRoot = Path.Combine(Path.GetTempPath(), "Dashboard", "core-upgrade", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
@@ -49,10 +56,16 @@ public static class CoreUpdater
 
             await VerifyArchiveSha256Async(archivePath, asset.Sha256Digest, cancellationToken);
             var extractedCore = ExtractCoreExecutable(archivePath, tempRoot);
+            if (await HasSameFileHashAsync(corePath, extractedCore, cancellationToken))
+            {
+                return new CoreUpgradeResult(version, asset.Name, "", IsAlreadyLatest: true);
+            }
+
+            beforeReplace?.Invoke();
             var backupPath = BackupCore(corePath);
             File.Copy(extractedCore, corePath, overwrite: true);
 
-            return new CoreUpgradeResult(version, asset.Name, backupPath);
+            return new CoreUpgradeResult(version, asset.Name, backupPath, IsAlreadyLatest: false);
         }
         finally
         {
@@ -63,6 +76,111 @@ public static class CoreUpdater
             catch
             {
             }
+        }
+    }
+
+    private static async Task<string> GetInstalledVersionAsync(string corePath, CancellationToken cancellationToken)
+    {
+        var startInfo = new ProcessStartInfo(corePath, "-v")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        try
+        {
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return "";
+            }
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+
+            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                TryKill(process);
+                return "";
+            }
+
+            var output = $"{await outputTask} {await errorTask}";
+            return ExtractVersionToken(output);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private static string ExtractVersionToken(string value)
+    {
+        var match = Regex.Match(value, @"v?\d+\.\d+\.\d+(?:[-+.][A-Za-z0-9.-]+)?");
+        return match.Success ? NormalizeVersion(match.Value) : "";
+    }
+
+    private static bool IsSameVersion(string installedVersion, string latestVersion)
+    {
+        installedVersion = NormalizeVersion(installedVersion);
+        latestVersion = NormalizeVersion(latestVersion);
+        return !string.IsNullOrWhiteSpace(installedVersion) &&
+            !string.IsNullOrWhiteSpace(latestVersion) &&
+            string.Equals(installedVersion, latestVersion, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeVersion(string value)
+    {
+        value = value.Trim().TrimStart('v', 'V').ToLowerInvariant();
+        return value.StartsWith("release-", StringComparison.OrdinalIgnoreCase)
+            ? value["release-".Length..]
+            : value;
+    }
+
+    private static async Task<bool> HasSameFileHashAsync(string currentPath, string candidatePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (new FileInfo(currentPath).Length != new FileInfo(candidatePath).Length)
+            {
+                return false;
+            }
+
+            var currentHash = await ComputeFileSha256Async(currentPath, cancellationToken);
+            var candidateHash = await ComputeFileSha256Async(candidatePath, cancellationToken);
+            return string.Equals(currentHash, candidateHash, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static async Task<string> ComputeFileSha256Async(string path, CancellationToken cancellationToken)
+    {
+        await using var stream = File.OpenRead(path);
+        var hash = await SHA256.HashDataAsync(stream, cancellationToken);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
         }
     }
 
