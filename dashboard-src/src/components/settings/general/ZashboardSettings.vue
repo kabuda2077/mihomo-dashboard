@@ -23,7 +23,7 @@
 
     <div
       v-if="isVisibleActions"
-      class="settings-grid my-3 gap-2 p-3 md:grid-cols-2!"
+      class="my-3 flex flex-col gap-3"
     >
       <DashboardSettings />
     </div>
