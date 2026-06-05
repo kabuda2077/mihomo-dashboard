@@ -51,7 +51,21 @@ type HostWindow = Window & {
 }
 
 const getCachedIcon = (icon: string) => {
-  return (window as HostWindow).__mihomoIconCache?.[icon] || icon
+  const cache = (window as HostWindow).__mihomoIconCache
+  if (!cache) {
+    return icon
+  }
+
+  if (cache[icon]) {
+    return cache[icon]
+  }
+
+  try {
+    const normalizedIcon = new URL(icon).href
+    return cache[normalizedIcon] || icon
+  } catch {
+    return icon
+  }
 }
 
 const applyCachedIconsToCurrentProxies = () => {

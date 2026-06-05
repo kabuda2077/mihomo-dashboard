@@ -33,6 +33,38 @@ public sealed class ProxyGroupIconCache
         }
     }
 
+    public void LoadExisting(string configPath)
+    {
+        var iconUrls = ExtractProxyGroupIconUrls(configPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (iconUrls.Length == 0)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            foreach (var iconUrl in iconUrls)
+            {
+                if (!Uri.TryCreate(iconUrl, UriKind.Absolute, out var uri)
+                    || uri.Scheme is not ("http" or "https"))
+                {
+                    continue;
+                }
+
+                var fileName = GetCacheFileName(uri);
+                if (!File.Exists(Path.Combine(CacheDirectory, fileName)))
+                {
+                    continue;
+                }
+
+                foreach (var key in GetCacheKeys(iconUrl, uri))
+                {
+                    _cachedFiles[key] = fileName;
+                }
+            }
+        }
+    }
+
     public async Task RefreshAsync(string configPath, CancellationToken cancellationToken = default)
     {
         if (!await _refreshLock.WaitAsync(0, cancellationToken))
@@ -56,11 +88,15 @@ public sealed class ProxyGroupIconCache
 
                 lock (_sync)
                 {
-                    if (!_cachedFiles.TryGetValue(iconUrl, out var existingFileName)
-                        || !string.Equals(existingFileName, fileName, StringComparison.OrdinalIgnoreCase))
+                    var iconUri = new Uri(iconUrl);
+                    foreach (var key in GetCacheKeys(iconUrl, iconUri))
                     {
-                        _cachedFiles[iconUrl] = fileName;
-                        changed = true;
+                        if (!_cachedFiles.TryGetValue(key, out var existingFileName)
+                            || !string.Equals(existingFileName, fileName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _cachedFiles[key] = fileName;
+                            changed = true;
+                        }
                     }
                 }
             }
@@ -146,6 +182,24 @@ public sealed class ProxyGroupIconCache
     {
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(iconUri.AbsoluteUri))).ToLowerInvariant();
         return hash + GetSafeExtension(iconUri);
+    }
+
+    private static IEnumerable<string> GetCacheKeys(string iconUrl, Uri iconUri)
+    {
+        yield return iconUrl;
+
+        var absoluteUri = iconUri.AbsoluteUri;
+        if (!string.Equals(iconUrl, absoluteUri, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return absoluteUri;
+        }
+
+        var originalString = iconUri.OriginalString;
+        if (!string.Equals(iconUrl, originalString, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(absoluteUri, originalString, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return originalString;
+        }
     }
 
     private static string GetSafeExtension(Uri iconUri)
