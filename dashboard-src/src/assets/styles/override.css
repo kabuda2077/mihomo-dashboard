@@ -97,11 +97,22 @@
   min-height: 2.25rem;
 }
 
+.ctrls-bar .ctrls-search {
+  flex: 0 1 20rem;
+  max-width: min(20rem, 32vw);
+  min-width: 12rem;
+  width: 20rem;
+}
+
 .ctrls-bar .tabs.tabs-xs {
   @apply border-base-content/20 bg-base-100 rounded-lg border shadow-none;
   align-items: center;
   gap: 0;
   padding: 0.125rem;
+}
+
+.ctrls-bar :is(.input.input-sm, .select.select-sm) {
+  @apply border-base-content/20 bg-base-100 rounded-lg border shadow-none;
 }
 
 .ctrls-bar .tabs.tabs-xs .tab {

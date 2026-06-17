@@ -40,5 +40,16 @@ dotnet publish -c $Configuration -r $Runtime --no-restore --nologo --verbosity q
     /p:DebugType=None `
     /p:DebugSymbols=false
 
+$runtimeDir = Join-Path $publishDir 'runtimes'
+$rootWebViewLoader = Join-Path $publishDir 'WebView2Loader.dll'
+if ((Test-Path $runtimeDir) -and (Test-Path $rootWebViewLoader)) {
+    Remove-Item -LiteralPath $runtimeDir -Recurse -Force
+}
+
+$publishedAppIcon = Join-Path $publishDir 'resources\app.ico'
+if (Test-Path $publishedAppIcon) {
+    Remove-Item -LiteralPath $publishedAppIcon -Force
+}
+
 Write-Host ""
 Write-Host "Publish completed: $publishDir" -ForegroundColor Green

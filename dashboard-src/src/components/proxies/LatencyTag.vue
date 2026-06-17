@@ -10,7 +10,7 @@
   >
     <span
       v-if="loading"
-      class="loading loading-dots loading-xs text-base-content/80"
+      class="loading loading-dots loading-xs text-base-content/60"
     ></span>
     <BoltIcon
       v-else-if="latency === NOT_CONNECTED || !latency"

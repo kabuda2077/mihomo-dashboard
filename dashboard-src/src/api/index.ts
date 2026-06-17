@@ -6,7 +6,6 @@ import { activeBackend, activeUuid } from '@/store/setup'
 import type {
   Backend,
   Config,
-  DNSQuery,
   NodeRank,
   Proxy,
   ProxyProvider,
@@ -213,12 +212,6 @@ export const reloadConfigsAPI = () => {
 
 export const updateGeoDataAPI = () => {
   return axios.post('/configs/geo')
-}
-
-export const queryDNSAPI = (params: { name: string; type: string }) => {
-  return axios.get<DNSQuery>('/dns/query', {
-    params,
-  })
 }
 
 const createWebSocket = <T>(url: string, searchParams?: Record<string, string>) => {

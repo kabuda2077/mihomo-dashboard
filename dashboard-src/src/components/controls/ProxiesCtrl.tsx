@@ -229,7 +229,7 @@ export default defineComponent({
         ? `${t('searchProxyNode')} | Regex`
         : `${t('searchProxyGroup')} | Regex`
       const searchInput = (
-        <div class={['relative', isLargeCtrlsBar.value ? 'w-80 max-w-[32vw]' : 'w-32 flex-1']}>
+        <div class={['relative', isLargeCtrlsBar.value ? 'ctrls-search' : 'w-32 flex-1']}>
           <button
             class="btn btn-circle btn-ghost btn-xs absolute top-1/2 left-1 z-20 h-6 min-h-6 w-6 -translate-y-1/2 p-0"
             title={

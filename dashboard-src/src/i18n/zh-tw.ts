@@ -125,7 +125,6 @@ const zhTW: LANG_MESSAGE = {
   secondaryPath: '二級路徑',
   secondaryPathTip: '如果有的話以/開頭，沒有則留空不填',
   logRetentionLimit: '日誌保留條數',
-  DNSQuery: 'DNS 查詢',
   currentBackendUnavailable: '當前後端不可用，嘗試切換到其他後端?',
   confirm: '確定',
   backendSwitchTo: '已切換後端為{backend}',
@@ -242,8 +241,7 @@ const zhTW: LANG_MESSAGE = {
   numberOfChartsInSidebar: '側邊欄圖表數量',
   flushSmartWeights: '清空Smart權重',
   IPInfoAPI: 'IP資訊API',
-  IPInfoAPITip:
-    '此API會用於IP檢查中全球節點IP資訊查詢、連接詳情中的IP地理資訊查詢、面板DNS查詢中的IP地理資訊查詢。',
+  IPInfoAPITip: '此API會用於IP檢查中全球節點IP資訊查詢、連接詳情中的IP地理資訊查詢。',
   general: '通用',
   groupProxiesByProvider: '節點根據提供商分組',
   useSmartGroupSort: 'Smart組根據使用頻率排序',

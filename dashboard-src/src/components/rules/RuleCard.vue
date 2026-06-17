@@ -15,7 +15,7 @@
           <span class="text-base-content/50 text-xs tabular-nums">
             {{ index }}
           </span>
-          <span class="text-base-content/80 ml-4 text-xs">
+          <span class="text-base-content/60 ml-4 text-xs">
             <HighlightText
               :text="rule.type"
               :filter="rulesFilter"

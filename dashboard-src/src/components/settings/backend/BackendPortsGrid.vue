@@ -7,7 +7,7 @@
       <div
         v-for="(port, index) in ports"
         :key="port.key"
-        class="rounded-box bg-base-200/60 grid gap-1 p-2"
+        class="rounded-box bg-base-200/70 grid gap-1 p-2"
         :class="getPortTileLayoutClass(index)"
       >
         <label

@@ -123,7 +123,6 @@ const en = {
   secondaryPath: 'Secondary path',
   secondaryPathTip: 'If present, start with "/", otherwise leave empty.',
   logRetentionLimit: 'Log retention limit',
-  DNSQuery: 'DNS query',
   currentBackendUnavailable:
     'The current backend is unavailable. Would you like to switch to another backend?',
   confirm: 'Confirm',
@@ -248,7 +247,7 @@ const en = {
   flushSmartWeights: 'Clear smart weights',
   IPInfoAPI: 'IP info API',
   IPInfoAPITip:
-    "This API is used to look up global node IP information during IP checks, and for IP geolocation lookups in connection details and zashboard's DNS query feature.",
+    'This API is used to look up global node IP information during IP checks and for IP geolocation lookups in connection details.',
   general: 'General',
   groupProxiesByProvider: 'Group proxies by provider',
   useSmartGroupSort: 'Sort smart groups by usage frequency',

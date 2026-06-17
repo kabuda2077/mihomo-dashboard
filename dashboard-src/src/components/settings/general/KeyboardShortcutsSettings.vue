@@ -10,7 +10,7 @@
       <div
         v-for="item in shortcuts"
         :key="item.action"
-        class="bg-base-200/60 flex items-center gap-2 rounded-lg px-3 py-2"
+        class="bg-base-200/70 flex items-center gap-2 rounded-lg px-3 py-2"
       >
         <div class="min-w-0 flex-1">
           <div class="truncate">

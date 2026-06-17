@@ -21,7 +21,7 @@
             "
           />
           <div
-            class="border-base-content/20 bg-base-100 flex h-9 w-full min-w-0 items-center gap-3 rounded-lg border px-3 pr-4 shadow-xs"
+            class="border-base-content/20 bg-base-100 flex h-9 w-full min-w-0 items-center gap-3 rounded-lg border px-3 pr-4 shadow-none"
           >
             <span class="font-semibold whitespace-nowrap">Mihomo Core</span>
             <span class="text-base-content/60 text-xs whitespace-nowrap">
@@ -66,7 +66,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="settings.corePath"
-                  class="input input-sm bg-base-200/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                  class="input input-sm bg-base-200/70 text-base-content/50 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
                 <button
@@ -89,7 +89,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="settings.configPath"
-                  class="input input-sm bg-base-200/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                  class="input input-sm bg-base-200/70 text-base-content/50 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
                 <button
@@ -112,7 +112,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="settings.apiUrl"
-                  class="input input-sm bg-base-200/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                  class="input input-sm bg-base-200/70 text-base-content/50 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
               </div>
@@ -123,7 +123,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="settings.secret"
-                  class="input input-sm bg-base-200/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                  class="input input-sm bg-base-200/70 text-base-content/50 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
                 <button
@@ -182,7 +182,7 @@
             :style="logPanelHeight ? { height: `${logPanelHeight}px` } : undefined"
           >
             <pre
-              class="bg-base-200/60 text-base-content/80 rounded-box h-full min-h-0 overflow-auto p-3 text-xs leading-5 whitespace-pre-wrap"
+              class="bg-base-200/70 text-base-content/50 rounded-box h-full min-h-0 overflow-auto p-3 text-xs leading-5 whitespace-pre-wrap"
               >{{ runtime.logText || '暂无日志' }}</pre
             >
           </div>

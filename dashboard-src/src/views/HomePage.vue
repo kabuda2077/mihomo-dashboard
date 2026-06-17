@@ -134,6 +134,12 @@ const ensureTask = (key: string, task: () => void) => {
   task()
 }
 
+const initializeGlobalData = () => {
+  ensureTask('connections', initConnections)
+  ensureTask('proxies', fetchProxies)
+  ensureTask('statistics', initSatistic)
+}
+
 const initializeRouteData = () => {
   if (!activeUuid.value) return
 
@@ -145,17 +151,6 @@ const initializeRouteData = () => {
   ensureTask('configs', fetchConfigs)
 
   switch (routeName) {
-    case ROUTE_NAME.overview:
-      ensureTask('connections', initConnections)
-      ensureTask('proxies', fetchProxies)
-      ensureTask('statistics', initSatistic)
-      break
-    case ROUTE_NAME.proxies:
-      ensureTask('proxies', fetchProxies)
-      break
-    case ROUTE_NAME.connections:
-      ensureTask('connections', initConnections)
-      break
     case ROUTE_NAME.rules:
       ensureTask('rules', fetchRules)
       break
@@ -172,6 +167,7 @@ watch(
     initializedTasks.clear()
     rulesTabShow.value = RULE_TAB_TYPE.RULES
     proxiesTabShow.value = PROXY_TAB_TYPE.PROXIES
+    initializeGlobalData()
     initializeRouteData()
   },
   {

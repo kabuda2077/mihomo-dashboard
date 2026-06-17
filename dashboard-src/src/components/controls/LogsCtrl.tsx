@@ -153,7 +153,7 @@ export default defineComponent({
         <TextInput
           v-model={logFilter.value}
           beforeClose={true}
-          class="flex-1"
+          class={isLargeCtrlsBar.value ? 'ctrls-search' : 'flex-1'}
           placeholder={`${t('search')} | Regex`}
           clearable={true}
           menus={logSearchHistory.value}
@@ -165,7 +165,7 @@ export default defineComponent({
       const logTypeSelect = (
         <select
           class={[
-            'join-item select select-sm',
+            'select select-sm',
             isLargeCtrlsBar.value ? 'w-36' : 'w-24 max-w-40 flex-1',
           ]}
           v-model={logTypeFilter.value}
@@ -297,7 +297,7 @@ export default defineComponent({
             <div class="join flex-1">{levelSelect}</div>
             {buttons}
           </div>
-          <div class="join">
+          <div class="flex items-center gap-2">
             {logTypeSelect}
             {searchInput}
           </div>
@@ -306,7 +306,7 @@ export default defineComponent({
         <div class="flex items-center gap-2 p-2">
           <div class="flex items-center gap-2">
             {levelSelect}
-            <div class="join w-96">
+            <div class="flex items-center gap-2">
               {logTypeSelect}
               {searchInput}
             </div>

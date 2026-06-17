@@ -99,7 +99,7 @@ export default defineComponent({
 
       const searchInput = (
         <TextInput
-          class={isLargeCtrlsBar.value ? 'w-80' : 'w-32 flex-1'}
+          class={isLargeCtrlsBar.value ? 'ctrls-search' : 'w-32 flex-1'}
           v-model={rulesFilter.value}
           placeholder={`${t('search')} | Regex`}
           clearable={true}

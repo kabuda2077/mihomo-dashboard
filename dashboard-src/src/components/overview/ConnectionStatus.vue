@@ -21,7 +21,7 @@
         <span class="text-base-content/70 text-sm">{{ item.name }}</span>
         <span
           class="flex items-center gap-1.5 text-sm font-medium"
-          :class="item.value ? getColorForLatency(Number(item.value)) : 'text-base-content/20'"
+          :class="item.value ? getColorForLatency(Number(item.value)) : 'text-base-border'"
         >
           <template v-if="item.value">{{ item.value }}ms</template>
           <template v-else>--</template>

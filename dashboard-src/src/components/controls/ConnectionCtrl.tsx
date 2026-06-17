@@ -159,7 +159,7 @@ export default defineComponent({
           placeholder={`${t('search')} | Regex`}
           clearable={true}
           before-close={true}
-          class={isLargeCtrlsBar.value ? 'w-32 max-w-80 flex-1' : 'w-full'}
+          class={isLargeCtrlsBar.value ? 'ctrls-search' : 'w-full'}
         />
       )
 
@@ -228,7 +228,7 @@ export default defineComponent({
           <ConnectionTabs />
           {isConnectionCard.value && sortForCards}
           <SourceIPFilter class="w-40" />
-          <div class="flex flex-1">{searchInput}</div>
+          {searchInput}
           {settingsModal}
           {buttons}
         </div>

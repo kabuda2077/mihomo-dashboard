@@ -128,12 +128,10 @@
           <BackendPortsGrid v-if="!isSingBox && configs" />
         </div>
 
-        <div class="settings-section-label">
-          {{ $t('DNSQuery') }}
-        </div>
+        <div class="settings-section-label">当前下载</div>
         <div class="settings-grid">
-          <div class="p-3">
-            <DnsQuery />
+          <div class="min-h-[136px] p-3">
+            <TopDownloadConnections />
           </div>
         </div>
       </div>
@@ -153,7 +151,7 @@ import {
 } from '@/api'
 import BackendVersion from '@/components/common/BackendVersion.vue'
 import BackendPortsGrid from '@/components/settings/backend/BackendPortsGrid.vue'
-import DnsQuery from '@/components/settings/backend/DnsQuery.vue'
+import TopDownloadConnections from '@/components/settings/backend/TopDownloadConnections.vue'
 import { coreHostActionsKey } from '@/composables/coreHostActions'
 import { MIHOMO, MIHOMO_CHANNEL } from '@/constant'
 import { showNotification } from '@/helper/notification'
