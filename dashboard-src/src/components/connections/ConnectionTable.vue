@@ -112,7 +112,7 @@
           <tr v-if="rows.length === 0">
             <td
               :colspan="tanstackTable.getVisibleLeafColumns().length"
-              class="text-base-content/50 h-90"
+              class="text-base-content/60 h-90"
             >
               <div class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 <CircleStackIcon class="h-10 w-10 opacity-60" />

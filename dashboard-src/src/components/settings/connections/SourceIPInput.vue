@@ -20,7 +20,7 @@
       />
       <span
         v-if="sourceIPLabel.scope?.length"
-        class="text-base-content/50 max-w-48 shrink-0 truncate text-xs"
+        class="text-base-content/60 max-w-48 shrink-0 truncate text-xs"
         @mouseenter="checkTruncation"
       >
         {{

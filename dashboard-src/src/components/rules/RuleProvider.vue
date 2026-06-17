@@ -1,18 +1,18 @@
 <template>
   <div class="scroller-item hover:bg-base-200/40 px-4 py-2.5 sm:flex sm:items-center sm:gap-4">
     <div class="flex min-w-0 items-center gap-2 sm:flex-1">
-      <span class="text-base-content/50 shrink-0 text-xs tabular-nums">{{ index }}</span>
+      <span class="text-base-content/60 shrink-0 text-xs tabular-nums">{{ index }}</span>
       <span class="min-w-0 truncate text-sm">
         <HighlightText
           :text="ruleProvider.name"
           :filter="rulesFilter"
         />
       </span>
-      <span class="text-base-content/50 shrink-0 text-xs tabular-nums">
+      <span class="text-base-content/60 shrink-0 text-xs tabular-nums">
         · {{ ruleProvider.ruleCount }} {{ $t('rules') }}
       </span>
     </div>
-    <div class="text-base-content/50 mt-1.5 flex items-center gap-1.5 text-xs sm:mt-0">
+    <div class="text-base-content/60 mt-1.5 flex items-center gap-1.5 text-xs sm:mt-0">
       <span v-if="ruleProvider.behavior">
         <HighlightText
           :text="ruleProvider.behavior"
@@ -28,7 +28,7 @@
       </span>
     </div>
     <div class="mt-1 flex items-center justify-between sm:mt-0 sm:shrink-0">
-      <span class="text-base-content/50 text-xs">
+      <span class="text-base-content/60 text-xs">
         {{ $t('updated') }} {{ fromNow(ruleProvider.updatedAt) }}
       </span>
       <button

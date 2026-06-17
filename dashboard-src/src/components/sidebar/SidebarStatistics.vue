@@ -5,7 +5,7 @@
       :key="stat.label"
       class="flex flex-col items-start"
     >
-      <div class="text-base-content/70 text-xs">{{ $t(stat.label) }}</div>
+      <div class="text-base-content/60 text-xs">{{ $t(stat.label) }}</div>
       <div class="text-sm">{{ stat.value }}</div>
     </div>
   </div>

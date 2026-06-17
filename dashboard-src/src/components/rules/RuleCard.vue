@@ -12,7 +12,7 @@
         @click="clickHandler"
       >
         <div class="min-h-5 leading-5">
-          <span class="text-base-content/50 text-xs tabular-nums">
+          <span class="text-base-content/60 text-xs tabular-nums">
             {{ index }}
           </span>
           <span class="text-base-content/60 ml-4 text-xs">
@@ -33,7 +33,7 @@
           </span>
           <span
             v-if="typeof size === 'number' && size !== -1"
-            class="text-base-content/50 ml-1 text-xs tabular-nums"
+            class="text-base-content/60 ml-1 text-xs tabular-nums"
           >
             ({{ size }})
             <QuestionMarkCircleIcon

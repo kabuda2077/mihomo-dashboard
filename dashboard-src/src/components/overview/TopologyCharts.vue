@@ -20,7 +20,7 @@
       />
       <div
         v-if="sankeyData.nodes.length === 0"
-        class="text-base-content/50 absolute inset-0 flex items-center justify-center"
+        class="text-base-content/60 absolute inset-0 flex items-center justify-center"
       >
         <div class="text-center">
           <div>{{ t('noData') }}</div>

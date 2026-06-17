@@ -21,7 +21,7 @@
             :tooltip-formatter="speedTooltipFormatter"
           />
         </div>
-        <div class="text-base-content/50 text-xs">{{ $t('total') }} {{ ulTotalStr }}</div>
+        <div class="text-base-content/60 text-xs">{{ $t('total') }} {{ ulTotalStr }}</div>
       </div>
 
       <!-- Download Speed -->
@@ -42,7 +42,7 @@
             :tooltip-formatter="speedTooltipFormatter"
           />
         </div>
-        <div class="text-base-content/50 text-xs">{{ $t('total') }} {{ dlTotalStr }}</div>
+        <div class="text-base-content/60 text-xs">{{ $t('total') }} {{ dlTotalStr }}</div>
       </div>
 
       <!-- Active Connections -->
@@ -65,7 +65,7 @@
             :tooltip-formatter="connTooltipFormatter"
           />
         </div>
-        <div class="text-base-content/50 text-xs">{{ $t('memoryUsage') }} {{ memoryStr }}</div>
+        <div class="text-base-content/60 text-xs">{{ $t('memoryUsage') }} {{ memoryStr }}</div>
       </div>
     </div>
   </div>
