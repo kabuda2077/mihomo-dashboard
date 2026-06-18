@@ -3,8 +3,11 @@ import { addBackend } from '@/store/setup'
 import type { Backend } from '@/types'
 
 type HostState = {
+  coreType?: string
   apiUrl?: string
   secret?: string
+  singBoxNativeApiUrl?: string
+  singBoxNativeSecret?: string
   iconCacheMap?: Record<string, string>
 }
 
@@ -36,7 +39,11 @@ const normalizePath = (pathname: string) => {
   return path === '' || path === '/' ? '' : path
 }
 
-const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefined) => {
+const backendFromApiUrl = (
+  apiUrl: string | undefined,
+  secret: string | undefined,
+  coreType: string | undefined,
+) => {
   if (!apiUrl) return null
 
   try {
@@ -47,17 +54,65 @@ const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefine
       port: url.port || (url.protocol === 'https:' ? '443' : '80'),
       secondaryPath: normalizePath(url.pathname),
       password: secret || '',
-      label: '本机内核',
+      label: coreType === 'sing-box' ? '本机 sing-box' : '本机内核',
       disableUpgradeCore: true,
+      singboxChannel: undefined,
     } satisfies Omit<Backend, 'uuid'>
   } catch {
     return null
   }
 }
 
+const singboxChannelFromApiUrl = (
+  apiUrl: string | undefined,
+  secret: string | undefined,
+): Backend['singboxChannel'] => {
+  if (!apiUrl) return undefined
+
+  try {
+    const url = new URL(apiUrl)
+    return {
+      protocol: url.protocol.replace(':', ''),
+      host: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? '443' : '80'),
+      secret: secret || '',
+    }
+  } catch {
+    return undefined
+  }
+}
+
 const applyBackend = (backend: Omit<Backend, 'uuid'> | null, replaceExisting = false) => {
   if (!backend?.protocol || !backend.host || !backend.port) return
   addBackend(backend, { replaceExisting })
+}
+
+let backendApplyVersion = 0
+const applyBackendFromState = (state: HostState | undefined, replaceExisting = false) => {
+  const version = ++backendApplyVersion
+  const backend = backendFromApiUrl(state?.apiUrl, state?.secret, state?.coreType)
+  applyBackend(backend, replaceExisting)
+
+  const singboxChannel = singboxChannelFromApiUrl(
+    state?.singBoxNativeApiUrl,
+    state?.singBoxNativeSecret,
+  )
+  if (!backend || !singboxChannel || !__SINGBOX_NATIVE__) {
+    return
+  }
+
+  import('@/api/singbox/client')
+    .then(async ({ probeSingboxChannel }) => {
+      const nextBackend = { ...backend, singboxChannel }
+      const available = await probeSingboxChannel(
+        { ...nextBackend, uuid: 'host-singbox-probe' },
+        3000,
+      )
+      if (available && version === backendApplyVersion) {
+        applyBackend(nextBackend, replaceExisting)
+      }
+    })
+    .catch(() => {})
 }
 
 const applyIconCache = (state: HostState | undefined) => {
@@ -267,11 +322,11 @@ if (!(window as HostWindow).chrome?.webview) {
 installWindowChromeBridge()
 ;(window as HostWindow).__mihomoApplyBackend = (state) => {
   applyIconCache(state)
-  applyBackend(backendFromApiUrl(state.apiUrl, state.secret), true)
+  applyBackendFromState(state, true)
 }
 ;(window as HostWindow).chrome?.webview?.addEventListener?.('message', (event) => {
   if (event.data?.type === 'state') {
     applyIconCache(event.data.state)
-    applyBackend(backendFromApiUrl(event.data.state?.apiUrl, event.data.state?.secret), true)
+    applyBackendFromState(event.data.state, true)
   }
 })

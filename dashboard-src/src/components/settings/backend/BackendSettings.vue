@@ -64,7 +64,7 @@
               重启内核
             </button>
             <button
-              v-if="coreHostActions"
+              v-if="coreHostActions?.canUpgradeCore.value"
               class="btn btn-sm bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none"
               :disabled="coreHostActions.isCoreUpgrading.value"
               @click="coreHostActions.upgradeCore"

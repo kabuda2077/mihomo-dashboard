@@ -74,6 +74,23 @@ export const getSingboxUrlFromBackend = (end: Pick<Backend, 'singboxChannel'>) =
 export const getSingboxSecret = (end: Pick<Backend, 'singboxChannel'>) =>
   end.singboxChannel?.secret || ''
 
+const parseSingboxChannelFromQuery = (query: URLSearchParams): Backend['singboxChannel'] => {
+  const apiUrl = query.get('singBoxNativeApiUrl')
+  if (!apiUrl) return undefined
+
+  try {
+    const url = new URL(apiUrl)
+    return {
+      protocol: url.protocol.replace(':', ''),
+      host: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? '443' : '80'),
+      secret: query.get('singBoxNativeSecret') || '',
+    }
+  } catch {
+    return undefined
+  }
+}
+
 export const getLabelFromBackend = (end: Omit<Backend, 'uuid'>) => {
   return end.label || getUrlFromBackend(end)
 }
@@ -160,10 +177,13 @@ export const getBackendFromUrl = () => {
       host: query.get('hostname') as string,
       port: query.get('port') as string,
       password: query.get('secret') || '',
-      label: query.get('label') || '',
+      label:
+        query.get('label') ||
+        (query.get('coreType') === 'sing-box' ? '本机 sing-box' : '本机内核'),
       disableUpgradeCore:
         query.get('disableUpgradeCore') === '1' || query.get('disableUpgradeCore') === 'core',
       disableTunMode: query.get('disableTunMode') === '1' || query.get('disableTunMode') === 'tun',
+      singboxChannel: parseSingboxChannelFromQuery(query),
     }
   }
   return null

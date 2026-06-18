@@ -23,7 +23,7 @@
           <div
             class="border-base-content/20 bg-base-100 flex h-9 w-full min-w-0 items-center gap-3 rounded-lg border px-3 pr-4 shadow-none"
           >
-            <span class="font-semibold whitespace-nowrap">Mihomo Core</span>
+            <span class="font-semibold whitespace-nowrap">{{ coreTitle }}</span>
             <span class="text-base-content/60 text-xs whitespace-nowrap">
               {{ runtimeStatusText }}
             </span>
@@ -62,16 +62,46 @@
             class="settings-grid"
           >
             <div class="setting-item !gap-0">
+              <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">内核类型</div>
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <button
+                  class="btn btn-sm min-w-20 border-transparent shadow-none"
+                  :class="
+                    settings.coreType === 'mihomo'
+                      ? 'btn-primary'
+                      : 'bg-base-200/70 hover:bg-base-200/80'
+                  "
+                  :disabled="runtime.isRunning || runtime.isCoreUpgrading"
+                  @click="setCoreType('mihomo')"
+                >
+                  mihomo
+                </button>
+                <button
+                  class="btn btn-sm min-w-20 border-transparent shadow-none"
+                  :class="
+                    settings.coreType === 'sing-box'
+                      ? 'btn-primary'
+                      : 'bg-base-200/70 hover:bg-base-200/80'
+                  "
+                  :disabled="runtime.isRunning || runtime.isCoreUpgrading"
+                  @click="setCoreType('sing-box')"
+                >
+                  sing-box
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-item !gap-0">
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">内核路径</div>
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
-                  v-model="settings.corePath"
+                  v-model="activeCorePath"
                   class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
                 <button
                   class="btn btn-sm bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none"
-                  @click="post({ type: 'browseCore' })"
+                  @click="post({ ...collect(), type: 'browseCore' })"
                 >
                   选择
                 </button>
@@ -88,13 +118,13 @@
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">配置文件</div>
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
-                  v-model="settings.configPath"
+                  v-model="activeConfigPath"
                   class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
                 <button
                   class="btn btn-sm bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none"
-                  @click="post({ type: 'browseConfig' })"
+                  @click="post({ ...collect(), type: 'browseConfig' })"
                 >
                   选择
                 </button>
@@ -111,7 +141,7 @@
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">API 地址</div>
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
-                  v-model="settings.apiUrl"
+                  v-model="activeApiUrl"
                   class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
@@ -122,7 +152,7 @@
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">Secret</div>
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
-                  v-model="settings.secret"
+                  v-model="activeSecret"
                   class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
                   type="text"
                 />
@@ -134,6 +164,30 @@
                 </button>
               </div>
             </div>
+
+            <template v-if="settings.coreType === 'sing-box'">
+              <div class="setting-item !gap-0">
+                <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">原生 API</div>
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <input
+                    v-model="settings.singBoxNativeApiUrl"
+                    class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                    type="text"
+                  />
+                </div>
+              </div>
+
+              <div class="setting-item !gap-0">
+                <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">原生 Secret</div>
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <input
+                    v-model="settings.singBoxNativeSecret"
+                    class="input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none focus:border-transparent"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </template>
 
             <div class="setting-item">
               <div class="setting-item-label">启动软件时自动启动内核</div>
@@ -211,14 +265,27 @@ import { useRoute } from 'vue-router'
 type CoreState = {
   isRunning?: boolean
   processId?: number | null
+  coreType?: string
+  coreTitle?: string
   corePath?: string
   configPath?: string
   apiUrl?: string
   secret?: string
+  mihomoCorePath?: string
+  mihomoConfigPath?: string
+  mihomoApiUrl?: string
+  mihomoSecret?: string
+  singBoxCorePath?: string
+  singBoxConfigPath?: string
+  singBoxApiUrl?: string
+  singBoxSecret?: string
+  singBoxNativeApiUrl?: string
+  singBoxNativeSecret?: string
   startCoreOnLaunch?: boolean
   minimizeToTray?: boolean
   lightweightMode?: boolean
   autostart?: boolean
+  canUpgradeCore?: boolean
   isCoreUpgrading?: boolean
   logText?: string
   iconCacheMap?: Record<string, string>
@@ -256,15 +323,24 @@ const { padding } = usePaddingForViews({
 const runtime = reactive({
   isRunning: false,
   processId: null as number | null,
+  coreTitle: 'Mihomo Core',
+  canUpgradeCore: true,
   isCoreUpgrading: false,
   logText: '',
 })
 
 const settings = reactive({
-  corePath: '',
-  configPath: '',
-  apiUrl: '',
-  secret: '',
+  coreType: 'mihomo',
+  mihomoCorePath: '',
+  mihomoConfigPath: '',
+  mihomoApiUrl: '',
+  mihomoSecret: '',
+  singBoxCorePath: '',
+  singBoxConfigPath: '',
+  singBoxApiUrl: '',
+  singBoxSecret: '',
+  singBoxNativeApiUrl: '',
+  singBoxNativeSecret: '',
   startCoreOnLaunch: false,
   minimizeToTray: true,
   lightweightMode: true,
@@ -300,12 +376,73 @@ const runtimeStatusText = computed(() => {
   return runtime.processId ? `运行中 / PID ${runtime.processId}` : '运行中'
 })
 
+const normalizeCoreType = (coreType: string | undefined) =>
+  coreType === 'sing-box' ? 'sing-box' : 'mihomo'
+
+const coreTitle = computed(() => runtime.coreTitle || (settings.coreType === 'sing-box' ? 'sing-box' : 'Mihomo Core'))
+
+const activeCorePath = computed({
+  get: () => (settings.coreType === 'sing-box' ? settings.singBoxCorePath : settings.mihomoCorePath),
+  set: (value: string) => {
+    if (settings.coreType === 'sing-box') {
+      settings.singBoxCorePath = value
+    } else {
+      settings.mihomoCorePath = value
+    }
+  },
+})
+
+const activeConfigPath = computed({
+  get: () =>
+    settings.coreType === 'sing-box' ? settings.singBoxConfigPath : settings.mihomoConfigPath,
+  set: (value: string) => {
+    if (settings.coreType === 'sing-box') {
+      settings.singBoxConfigPath = value
+    } else {
+      settings.mihomoConfigPath = value
+    }
+  },
+})
+
+const activeApiUrl = computed({
+  get: () => (settings.coreType === 'sing-box' ? settings.singBoxApiUrl : settings.mihomoApiUrl),
+  set: (value: string) => {
+    if (settings.coreType === 'sing-box') {
+      settings.singBoxApiUrl = value
+    } else {
+      settings.mihomoApiUrl = value
+    }
+  },
+})
+
+const activeSecret = computed({
+  get: () => (settings.coreType === 'sing-box' ? settings.singBoxSecret : settings.mihomoSecret),
+  set: (value: string) => {
+    if (settings.coreType === 'sing-box') {
+      settings.singBoxSecret = value
+    } else {
+      settings.mihomoSecret = value
+    }
+  },
+})
+
 const collect = () => ({
   type: 'save',
-  corePath: settings.corePath,
-  configPath: settings.configPath,
-  apiUrl: settings.apiUrl,
-  secret: settings.secret,
+  coreType: settings.coreType,
+  corePath: activeCorePath.value,
+  configPath: activeConfigPath.value,
+  apiUrl: activeApiUrl.value,
+  secret: activeSecret.value,
+  mihomoCorePath: settings.mihomoCorePath,
+  mihomoConfigPath: settings.mihomoConfigPath,
+  mihomoApiUrl: settings.mihomoApiUrl,
+  mihomoSecret: settings.mihomoSecret,
+  singBoxCorePath: settings.singBoxCorePath,
+  singBoxConfigPath: settings.singBoxConfigPath,
+  singBoxApiUrl: settings.singBoxApiUrl,
+  singBoxSecret: settings.singBoxSecret,
+  singBoxNativeApiUrl: settings.singBoxNativeApiUrl,
+  singBoxNativeSecret: settings.singBoxNativeSecret,
   startCoreOnLaunch: settings.startCoreOnLaunch,
   minimizeToTray: settings.minimizeToTray,
   lightweightMode: settings.lightweightMode,
@@ -321,6 +458,10 @@ const restartCore = () => {
 }
 
 const upgradeCore = () => {
+  if (!runtime.canUpgradeCore) {
+    return
+  }
+
   post({ ...collect(), type: 'upgradeCore' })
 }
 
@@ -328,9 +469,21 @@ const saveSettings = () => {
   post(collect())
 }
 
+const setCoreType = (coreType: string) => {
+  const normalized = normalizeCoreType(coreType)
+  if (settings.coreType === normalized) {
+    return
+  }
+
+  settings.coreType = normalized
+  runtime.coreTitle = normalized === 'sing-box' ? 'sing-box' : 'Mihomo Core'
+  saveSettings()
+}
+
 provide(coreHostActionsKey, {
   isRunning: computed(() => runtime.isRunning),
   isCoreUpgrading: computed(() => runtime.isCoreUpgrading),
+  canUpgradeCore: computed(() => runtime.canUpgradeCore),
   restartCore,
   upgradeCore,
 })
@@ -338,12 +491,27 @@ provide(coreHostActionsKey, {
 const setState = (state: CoreState) => {
   runtime.isRunning = !!state.isRunning
   runtime.processId = state.processId ?? null
+  settings.coreType = normalizeCoreType(state.coreType)
+  runtime.coreTitle = state.coreTitle ?? (settings.coreType === 'sing-box' ? 'sing-box' : 'Mihomo Core')
+  runtime.canUpgradeCore = state.canUpgradeCore ?? settings.coreType !== 'sing-box'
   runtime.isCoreUpgrading = !!state.isCoreUpgrading
   runtime.logText = state.logText ?? ''
-  settings.corePath = state.corePath ?? ''
-  settings.configPath = state.configPath ?? ''
-  settings.apiUrl = state.apiUrl ?? ''
-  settings.secret = state.secret ?? ''
+  settings.mihomoCorePath = state.mihomoCorePath ?? (settings.coreType === 'mihomo' ? state.corePath : '') ?? ''
+  settings.mihomoConfigPath =
+    state.mihomoConfigPath ?? (settings.coreType === 'mihomo' ? state.configPath : '') ?? ''
+  settings.mihomoApiUrl = state.mihomoApiUrl ?? (settings.coreType === 'mihomo' ? state.apiUrl : '') ?? ''
+  settings.mihomoSecret =
+    state.mihomoSecret ?? (settings.coreType === 'mihomo' ? state.secret : '') ?? ''
+  settings.singBoxCorePath =
+    state.singBoxCorePath ?? (settings.coreType === 'sing-box' ? state.corePath : '') ?? ''
+  settings.singBoxConfigPath =
+    state.singBoxConfigPath ?? (settings.coreType === 'sing-box' ? state.configPath : '') ?? ''
+  settings.singBoxApiUrl =
+    state.singBoxApiUrl ?? (settings.coreType === 'sing-box' ? state.apiUrl : '') ?? ''
+  settings.singBoxSecret =
+    state.singBoxSecret ?? (settings.coreType === 'sing-box' ? state.secret : '') ?? ''
+  settings.singBoxNativeApiUrl = state.singBoxNativeApiUrl ?? ''
+  settings.singBoxNativeSecret = state.singBoxNativeSecret ?? ''
   settings.startCoreOnLaunch = !!state.startCoreOnLaunch
   settings.minimizeToTray = !!state.minimizeToTray
   settings.lightweightMode = state.lightweightMode ?? true

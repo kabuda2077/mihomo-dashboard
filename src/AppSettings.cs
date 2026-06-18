@@ -5,6 +5,8 @@ namespace Dashboard;
 
 public sealed class AppSettings
 {
+    public const string CoreTypeMihomo = "mihomo";
+    public const string CoreTypeSingBox = "sing-box";
     private const string AppDirectoryName = "Dashboard";
     private const string LegacyAppDirectoryName = "MihomoDashboard";
 
@@ -14,15 +16,101 @@ public sealed class AppSettings
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    public string CoreType { get; set; } = CoreTypeMihomo;
     public string CorePath { get; set; } = @"E:\APP\Dashboard\mihomo\mihomo.exe";
     public string ConfigPath { get; set; } = DefaultConfigPath;
     public string DashboardApiUrl { get; set; } = "http://127.0.0.1:9090";
     public string Secret { get; set; } = "";
     public string? ProtectedSecret { get; set; }
+    public string SingBoxCorePath { get; set; } = @"E:\APP\Dashboard\sing-box\sing-box.exe";
+    public string SingBoxConfigPath { get; set; } = @"E:\APP\Dashboard\sing-box\config.json";
+    public string SingBoxApiUrl { get; set; } = "http://127.0.0.1:9090";
+    public string SingBoxSecret { get; set; } = "";
+    public string? ProtectedSingBoxSecret { get; set; }
+    public string SingBoxNativeApiUrl { get; set; } = "";
+    public string SingBoxNativeSecret { get; set; } = "";
+    public string? ProtectedSingBoxNativeSecret { get; set; }
     public bool StartCoreOnLaunch { get; set; }
     public bool MinimizeToTray { get; set; } = true;
     public bool LightweightMode { get; set; } = true;
     public bool Autostart { get; set; }
+
+    [JsonIgnore]
+    public bool IsSingBox => string.Equals(NormalizeCoreType(CoreType), CoreTypeSingBox, StringComparison.Ordinal);
+
+    [JsonIgnore]
+    public string CoreDisplayName => IsSingBox ? "sing-box" : "mihomo";
+
+    [JsonIgnore]
+    public string CoreTitle => IsSingBox ? "sing-box" : "Mihomo Core";
+
+    [JsonIgnore]
+    public string ActiveCorePath
+    {
+        get => IsSingBox ? SingBoxCorePath : CorePath;
+        set
+        {
+            if (IsSingBox)
+            {
+                SingBoxCorePath = value;
+            }
+            else
+            {
+                CorePath = value;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string ActiveConfigPath
+    {
+        get => IsSingBox ? SingBoxConfigPath : ConfigPath;
+        set
+        {
+            if (IsSingBox)
+            {
+                SingBoxConfigPath = value;
+            }
+            else
+            {
+                ConfigPath = value;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string ActiveDashboardApiUrl
+    {
+        get => IsSingBox ? SingBoxApiUrl : DashboardApiUrl;
+        set
+        {
+            if (IsSingBox)
+            {
+                SingBoxApiUrl = value;
+            }
+            else
+            {
+                DashboardApiUrl = value;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string ActiveSecret
+    {
+        get => IsSingBox ? SingBoxSecret : Secret;
+        set
+        {
+            if (IsSingBox)
+            {
+                SingBoxSecret = value;
+            }
+            else
+            {
+                Secret = value;
+            }
+        }
+    }
 
     public static string AppDirectory => ResolveAppDirectory();
 
@@ -56,7 +144,8 @@ public sealed class AppSettings
         {
             var json = File.ReadAllText(SettingsPath);
             var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
-            var shouldSave = settings.RestoreSecret(json);
+            var shouldSave = settings.RestoreSecrets(json);
+            settings.CoreType = NormalizeCoreType(settings.CoreType);
             settings.MigrateDefaultConfigPath();
             if (shouldSave)
             {
@@ -74,6 +163,9 @@ public sealed class AppSettings
     {
         Directory.CreateDirectory(SettingsDirectory);
         ProtectedSecret = SecretProtector.Protect(Secret);
+        ProtectedSingBoxSecret = SecretProtector.Protect(SingBoxSecret);
+        ProtectedSingBoxNativeSecret = SecretProtector.Protect(SingBoxNativeSecret);
+        CoreType = NormalizeCoreType(CoreType);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, JsonOptions));
     }
 
@@ -159,22 +251,49 @@ public sealed class AppSettings
         Save();
     }
 
-    private bool RestoreSecret(string json)
+    public static string NormalizeCoreType(string? coreType)
     {
-        TryReadStringProperty(json, nameof(Secret), out var portableSecret);
+        return string.Equals(coreType, CoreTypeSingBox, StringComparison.OrdinalIgnoreCase)
+            ? CoreTypeSingBox
+            : CoreTypeMihomo;
+    }
 
-        if (!string.IsNullOrWhiteSpace(ProtectedSecret))
+    private bool RestoreSecrets(string json)
+    {
+        var shouldSave = RestoreSecret(json, nameof(Secret), ProtectedSecret, value => Secret = value);
+        shouldSave |= RestoreSecret(
+            json,
+            nameof(SingBoxSecret),
+            ProtectedSingBoxSecret,
+            value => SingBoxSecret = value);
+        shouldSave |= RestoreSecret(
+            json,
+            nameof(SingBoxNativeSecret),
+            ProtectedSingBoxNativeSecret,
+            value => SingBoxNativeSecret = value);
+        return shouldSave;
+    }
+
+    private bool RestoreSecret(
+        string json,
+        string portablePropertyName,
+        string? protectedValue,
+        Action<string> setSecret)
+    {
+        TryReadStringProperty(json, portablePropertyName, out var portableSecret);
+
+        if (!string.IsNullOrWhiteSpace(protectedValue))
         {
             try
             {
-                Secret = SecretProtector.Unprotect(ProtectedSecret);
+                setSecret(SecretProtector.Unprotect(protectedValue));
             }
             catch
             {
-                Secret = portableSecret;
+                setSecret(portableSecret);
             }
 
-            return string.IsNullOrWhiteSpace(portableSecret) && !string.IsNullOrWhiteSpace(Secret);
+            return string.IsNullOrWhiteSpace(portableSecret);
         }
 
         if (string.IsNullOrWhiteSpace(portableSecret))
@@ -182,7 +301,7 @@ public sealed class AppSettings
             return false;
         }
 
-        Secret = portableSecret;
+        setSecret(portableSecret);
         return true;
     }
 

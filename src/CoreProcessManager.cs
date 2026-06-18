@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Dashboard;
 
-public sealed class MihomoManager : IDisposable
+public sealed class CoreProcessManager : IDisposable
 {
     private const int MaxLogLines = 500;
     private readonly CircularBuffer<string> _logLines = new(MaxLogLines);
@@ -71,24 +71,30 @@ public sealed class MihomoManager : IDisposable
 
         if (IsRunning)
         {
-            AppendLog("mihomo is already running.");
+            AppendLog($"{settings.CoreDisplayName} is already running.");
             return;
         }
 
-        if (!File.Exists(settings.CorePath))
+        var corePath = settings.ActiveCorePath;
+        var configPath = settings.ActiveConfigPath;
+        var coreName = settings.CoreDisplayName;
+
+        if (!File.Exists(corePath))
         {
-            throw new FileNotFoundException("找不到 mihomo 内核，请检查路径。", settings.CorePath);
+            throw new FileNotFoundException($"找不到 {coreName} 内核，请检查路径。", corePath);
         }
 
-        if (!File.Exists(settings.ConfigPath))
+        if (!File.Exists(configPath))
         {
-            throw new FileNotFoundException("找不到 mihomo 配置文件，请检查路径。", settings.ConfigPath);
+            throw new FileNotFoundException($"找不到 {coreName} 配置文件，请检查路径。", configPath);
         }
 
-        var configDirectory = Path.GetDirectoryName(settings.ConfigPath) ?? AppContext.BaseDirectory;
-        var arguments = $"-d \"{configDirectory}\" -f \"{settings.ConfigPath}\"";
+        var configDirectory = Path.GetDirectoryName(configPath) ?? AppContext.BaseDirectory;
+        var arguments = settings.IsSingBox
+            ? $"run -D \"{configDirectory}\" -c \"{configPath}\""
+            : $"-d \"{configDirectory}\" -f \"{configPath}\"";
 
-        var startInfo = new ProcessStartInfo(settings.CorePath, arguments)
+        var startInfo = new ProcessStartInfo(corePath, arguments)
         {
             WorkingDirectory = configDirectory,
             UseShellExecute = false,
@@ -111,7 +117,7 @@ public sealed class MihomoManager : IDisposable
         {
             if (processId == 0 || !ShouldSuppressExitedLog(processId))
             {
-                AppendLog($"mihomo exited with code {GetExitCodeText(process)}.");
+                AppendLog($"{coreName} exited with code {GetExitCodeText(process)}.");
             }
             StatusChanged?.Invoke(this, EventArgs.Empty);
         };
@@ -130,13 +136,13 @@ public sealed class MihomoManager : IDisposable
                     _process = null;
                 }
             }
-            throw new InvalidOperationException("mihomo 启动失败。");
+            throw new InvalidOperationException($"{coreName} 启动失败。");
         }
 
         processId = process.Id;
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        AppendLog($"mihomo started. pid={processId}");
+        AppendLog($"{coreName} started. pid={processId}");
         StatusChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -145,7 +151,7 @@ public sealed class MihomoManager : IDisposable
         if (!IsRunning)
         {
             DisposeExitedProcess();
-            AppendLog("mihomo is not running.");
+            AppendLog("core is not running.");
             return;
         }
 
@@ -160,11 +166,11 @@ public sealed class MihomoManager : IDisposable
             MarkStopping(process);
             process.Kill(entireProcessTree: true);
             process.WaitForExit(3000);
-            AppendLog("mihomo stopped.");
+            AppendLog("core stopped.");
         }
         catch (Exception ex)
         {
-            AppendLog($"failed to stop mihomo: {ex.Message}");
+            AppendLog($"failed to stop core: {ex.Message}");
             throw;
         }
         finally
