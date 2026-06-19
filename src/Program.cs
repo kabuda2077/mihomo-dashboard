@@ -63,8 +63,8 @@ internal static class Program
             return;
         }
 
-        var logPath = Path.Combine(AppSettings.SettingsDirectory, "crash.log");
-        Directory.CreateDirectory(AppSettings.SettingsDirectory);
+        var logPath = Path.Combine(AppSettings.LogDirectory, "crash.log");
+        Directory.CreateDirectory(AppSettings.LogDirectory);
         File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {exception}{Environment.NewLine}{Environment.NewLine}");
     }
 

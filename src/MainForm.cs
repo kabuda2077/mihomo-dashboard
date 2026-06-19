@@ -385,7 +385,7 @@ public sealed class MainForm : Form
         return _webView?.CoreWebView2 is not null;
     }
 
-    private static string WebViewUserDataDirectory => AppSettings.AppDirectory;
+    private static string WebViewUserDataDirectory => AppSettings.WebViewUserDataDirectory;
 
     private async Task<bool> InitializeWebViewAsync()
     {
@@ -398,6 +398,7 @@ public sealed class MainForm : Form
 
         try
         {
+            AppSettings.MigratePortableDataDirectory("EBWebView", WebViewUserDataDirectory);
             Directory.CreateDirectory(WebViewUserDataDirectory);
             var environment = await CoreWebView2Environment.CreateAsync(
                 browserExecutableFolder: null,

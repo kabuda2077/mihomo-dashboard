@@ -113,6 +113,16 @@ public sealed class AppSettings
 
     public static string SettingsDirectory => AppDirectory;
 
+    public static string ResourceDirectory => Path.Combine(AppDirectory, "resources");
+
+    public static string RuntimeDirectory => Path.Combine(ResourceDirectory, "runtime");
+
+    public static string CacheDirectory => Path.Combine(ResourceDirectory, "cache");
+
+    public static string LogDirectory => Path.Combine(ResourceDirectory, "logs");
+
+    public static string WebViewUserDataDirectory => Path.Combine(RuntimeDirectory, "EBWebView");
+
     private static string LegacyDashboardSettingsDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDirectoryName);
 
@@ -175,7 +185,17 @@ public sealed class AppSettings
         var trimmedBaseDirectory = baseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (Path.GetFileName(trimmedBaseDirectory).Equals("EBWebView", StringComparison.OrdinalIgnoreCase))
         {
-            return Directory.GetParent(trimmedBaseDirectory)?.FullName ?? baseDirectory;
+            var parent = Directory.GetParent(trimmedBaseDirectory);
+            var grandParent = parent?.Parent;
+            if (parent is not null
+                && grandParent is not null
+                && Path.GetFileName(parent.FullName).Equals("runtime", StringComparison.OrdinalIgnoreCase)
+                && Path.GetFileName(grandParent.FullName).Equals("resources", StringComparison.OrdinalIgnoreCase))
+            {
+                return grandParent.Parent?.FullName ?? baseDirectory;
+            }
+
+            return parent?.FullName ?? baseDirectory;
         }
 
         return baseDirectory;
@@ -207,6 +227,11 @@ public sealed class AppSettings
     public static void MigrateLegacyDataDirectory(string directoryName)
     {
         var targetDirectory = Path.Combine(SettingsDirectory, directoryName);
+        MigrateLegacyDataDirectory(directoryName, targetDirectory);
+    }
+
+    public static void MigrateLegacyDataDirectory(string directoryName, string targetDirectory)
+    {
         var legacyDirectory = new[] { LegacyDashboardSettingsDirectory, LegacyMihomoSettingsDirectory }
             .Select(directory => Path.Combine(directory, directoryName))
             .FirstOrDefault(Directory.Exists);
@@ -227,6 +252,54 @@ public sealed class AppSettings
                 {
                     File.Copy(sourcePath, targetPath);
                 }
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    public static void MigratePortableDataDirectory(string directoryName, string targetDirectory)
+    {
+        var sourceDirectory = Path.Combine(AppDirectory, directoryName);
+        if (!Directory.Exists(sourceDirectory) || IsSamePath(sourceDirectory, targetDirectory))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(targetDirectory);
+            foreach (var sourcePath in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourceDirectory, sourcePath);
+                var targetPath = Path.Combine(targetDirectory, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? targetDirectory);
+                if (!File.Exists(targetPath))
+                {
+                    File.Move(sourcePath, targetPath);
+                }
+                else
+                {
+                    File.Delete(sourcePath);
+                }
+            }
+
+            TryDeleteEmptyDirectory(sourceDirectory);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void TryDeleteEmptyDirectory(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory)
+                && !Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Any())
+            {
+                Directory.Delete(directory, recursive: true);
             }
         }
         catch
