@@ -195,7 +195,7 @@ Avoid introducing a second settings style in Core page. Prefer the same `setting
 - Reuse one of these families before creating a new button shape.
 
 - Standard small buttons: `btn btn-sm`.
-- Neutral utility buttons in panels: `btn btn-sm dashboard-action-btn`; the supplement must not set font size or font weight, so DaisyUI's base button typography stays intact.
+- Neutral utility buttons in panels: `btn btn-sm dashboard-action-btn`; this is the only soft-button supplement allowed to use numeric `font-weight: 550`, sitting between Tailwind `font-medium` and DaisyUI's heavier button default for Chinese labels.
 - Primary action: `btn-primary`.
 - Start/status action: `btn-success` only where the action truly means start/running.
 - Warning/destructive stop action: `btn-warning` when it represents warning/stop rather than deletion.
