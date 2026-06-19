@@ -115,13 +115,9 @@ public sealed class AppSettings
 
     public static string ResourceDirectory => Path.Combine(AppDirectory, "resources");
 
-    public static string RuntimeDirectory => Path.Combine(ResourceDirectory, "runtime");
-
-    public static string CacheDirectory => Path.Combine(ResourceDirectory, "cache");
-
     public static string LogDirectory => Path.Combine(ResourceDirectory, "logs");
 
-    public static string WebViewUserDataDirectory => Path.Combine(RuntimeDirectory, "EBWebView");
+    public static string WebViewUserDataDirectory => Path.Combine(ResourceDirectory, "EBWebView");
 
     private static string LegacyDashboardSettingsDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDirectoryName);
@@ -187,6 +183,12 @@ public sealed class AppSettings
         {
             var parent = Directory.GetParent(trimmedBaseDirectory);
             var grandParent = parent?.Parent;
+            if (parent is not null
+                && Path.GetFileName(parent.FullName).Equals("resources", StringComparison.OrdinalIgnoreCase))
+            {
+                return parent.Parent?.FullName ?? baseDirectory;
+            }
+
             if (parent is not null
                 && grandParent is not null
                 && Path.GetFileName(parent.FullName).Equals("runtime", StringComparison.OrdinalIgnoreCase)
@@ -261,7 +263,16 @@ public sealed class AppSettings
 
     public static void MigratePortableDataDirectory(string directoryName, string targetDirectory)
     {
-        var sourceDirectory = Path.Combine(AppDirectory, directoryName);
+        MigrateDataDirectory(Path.Combine(AppDirectory, directoryName), targetDirectory);
+    }
+
+    public static void MigrateResourceDataDirectory(string containerName, string directoryName, string targetDirectory)
+    {
+        MigrateDataDirectory(Path.Combine(ResourceDirectory, containerName, directoryName), targetDirectory);
+    }
+
+    private static void MigrateDataDirectory(string sourceDirectory, string targetDirectory)
+    {
         if (!Directory.Exists(sourceDirectory) || IsSamePath(sourceDirectory, targetDirectory))
         {
             return;

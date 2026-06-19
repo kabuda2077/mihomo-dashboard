@@ -16,13 +16,14 @@ public sealed class ProxyGroupIconCache
     public ProxyGroupIconCache()
     {
         AppSettings.MigratePortableDataDirectory("icon-cache", CacheDirectory);
+        AppSettings.MigrateResourceDataDirectory("cache", "icon-cache", CacheDirectory);
         AppSettings.MigrateLegacyDataDirectory("icon-cache", CacheDirectory);
         Directory.CreateDirectory(CacheDirectory);
     }
 
     public event EventHandler? CacheChanged;
 
-    public string CacheDirectory { get; } = Path.Combine(AppSettings.CacheDirectory, "icon-cache");
+    public string CacheDirectory { get; } = Path.Combine(AppSettings.ResourceDirectory, "icon-cache");
 
     public IReadOnlyDictionary<string, string> GetDashboardMap(Uri dashboardUri)
     {

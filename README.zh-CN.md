@@ -29,6 +29,7 @@ Dashboard 使用 WinForms + WebView2 承载本地打包的 zashboard UI，同时
 - `src/`：Windows 桌面宿主源码。
 - `dashboard-src/`：基于 zashboard 的前端源码，包含 Dashboard 专属改动。
 - `resources/dashboard/`：构建后的前端静态资源，会嵌入桌面应用。
+- `resources/EBWebView/` 和 `resources/icon-cache/`：应用运行时生成的 WebView 数据和代理组图标缓存。
 - `resources/app.ico`：桌面应用图标。
 - `resources/tray.ico`：托盘图标。
 - `tools/build-zashboard.ps1`：构建 `dashboard-src` 并同步到 `resources/dashboard`。
@@ -169,5 +170,6 @@ Dashboard 基于 zashboard，但不是 zashboard 的直接镜像。前端保留 
 ## 说明
 
 - `resources/dashboard` 从 `dashboard-src` 构建生成；修改前端后需要重新构建。
+- `resources/EBWebView` 和 `resources/icon-cache` 是运行数据目录，可以重新生成。
 - `dashboard-src/dist`、`bin`、`obj`、`artifacts/publish` 都是生成产物。
 - 便携包包含 Dashboard 应用文件，但仍需要 WebView2 Runtime 和所选代理内核可执行文件。

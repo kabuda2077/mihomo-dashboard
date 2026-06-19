@@ -399,6 +399,7 @@ public sealed class MainForm : Form
         try
         {
             AppSettings.MigratePortableDataDirectory("EBWebView", WebViewUserDataDirectory);
+            AppSettings.MigrateResourceDataDirectory("runtime", "EBWebView", WebViewUserDataDirectory);
             Directory.CreateDirectory(WebViewUserDataDirectory);
             var environment = await CoreWebView2Environment.CreateAsync(
                 browserExecutableFolder: null,
