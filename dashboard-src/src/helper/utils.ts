@@ -65,15 +65,6 @@ export const getUrlFromBackend = (end: Omit<Backend, 'uuid'>) => {
   return `${end.protocol}://${end.host}:${end.port}${end.secondaryPath || ''}`
 }
 
-export const getSingboxUrlFromBackend = (end: Pick<Backend, 'singboxChannel'>) => {
-  const channel = end.singboxChannel
-  if (!channel?.host) return ''
-  return `${channel.protocol}://${channel.host}:${channel.port}`
-}
-
-export const getSingboxSecret = (end: Pick<Backend, 'singboxChannel'>) =>
-  end.singboxChannel?.secret || ''
-
 export const getLabelFromBackend = (end: Omit<Backend, 'uuid'>) => {
   return end.label || getUrlFromBackend(end)
 }
@@ -160,7 +151,9 @@ export const getBackendFromUrl = () => {
       host: query.get('hostname') as string,
       port: query.get('port') as string,
       password: query.get('secret') || '',
-      label: query.get('label') || '',
+      label:
+        query.get('label') ||
+        (query.get('coreType') === 'sing-box' ? '本机 sing-box' : '本机内核'),
       disableUpgradeCore:
         query.get('disableUpgradeCore') === '1' || query.get('disableUpgradeCore') === 'core',
       disableTunMode: query.get('disableTunMode') === '1' || query.get('disableTunMode') === 'tun',

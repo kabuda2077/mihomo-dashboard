@@ -10,7 +10,7 @@ namespace Dashboard;
 public sealed class MainForm : Form
 {
     private readonly AppSettings _settings;
-    private readonly MihomoManager _mihomo = new();
+    private readonly CoreProcessManager _core = new();
     private readonly ProxyGroupIconCache _iconCache = new();
     private readonly DashboardServer _dashboardServer;
     private readonly Uri _dashboardUri;
@@ -31,6 +31,7 @@ public sealed class MainForm : Form
     private bool _startMinimized;
     private bool _startCoreAfterLaunch;
     private bool _coreUpgradeInProgress;
+    private bool _coreSwitchInProgress;
     private bool _elevatedRetryPending;
     private bool _tunPermissionFailureSeen;
     private bool _stateRefreshPending;
@@ -257,8 +258,8 @@ public sealed class MainForm : Form
 
     private void BindEvents()
     {
-        _mihomo.StatusChanged += (_, _) => BeginInvoke(new Action(RefreshStatus));
-        _mihomo.LogReceived += (_, entry) => BeginInvoke(new Action(() => QueueStateRefresh(entry)));
+        _core.StatusChanged += (_, _) => BeginInvoke(new Action(RefreshStatus));
+        _core.LogReceived += (_, entry) => BeginInvoke(new Action(() => QueueStateRefresh(entry)));
         _stateRefreshTimer.Tick += (_, _) =>
         {
             RefreshStateNow();
@@ -343,7 +344,7 @@ public sealed class MainForm : Form
     {
         _trayMenu?.Close();
 
-        var isRunning = _mihomo.IsRunning;
+        var isRunning = _core.IsRunning;
         _trayMenu = new TrayMenuForm(new[]
         {
             new TrayMenuItem("显示窗口", ShowFromTray),
@@ -441,7 +442,7 @@ public sealed class MainForm : Form
     private string BuildDashboardQuery()
     {
         var query = new List<string>();
-        if (Uri.TryCreate(_settings.DashboardApiUrl, UriKind.Absolute, out var apiUri))
+        if (Uri.TryCreate(_settings.ActiveDashboardApiUrl, UriKind.Absolute, out var apiUri))
         {
             query.Add(apiUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? "https=1" : "http=1");
             query.Add($"hostname={Uri.EscapeDataString(apiUri.Host)}");
@@ -461,6 +462,7 @@ public sealed class MainForm : Form
         }
 
         query.Add($"label={Uri.EscapeDataString("本机内核")}");
+        query.Add($"coreType={Uri.EscapeDataString(_settings.CoreType)}");
         query.Add("disableUpgradeCore=1");
 
         return string.Join("&", query);
@@ -508,6 +510,10 @@ public sealed class MainForm : Form
                     SaveSettingsFromMessage(root, showMessage: false);
                     RestartCore();
                     break;
+                case "switchCore":
+                    SaveSettingsFromMessage(root, showMessage: false);
+                    await SwitchCoreAsync(root);
+                    return;
                 case "stop":
                     StopCore();
                     break;
@@ -516,18 +522,20 @@ public sealed class MainForm : Form
                     await UpgradeCoreAsync();
                     break;
                 case "browseCore":
+                    SaveSettingsFromMessage(root, showMessage: false);
                     BrowseCorePath();
                     break;
                 case "browseConfig":
+                    SaveSettingsFromMessage(root, showMessage: false);
                     BrowseConfigPath();
                     break;
                 case "openCoreLocation":
                     SaveSettingsFromMessage(root, showMessage: false);
-                    await OpenPathLocationAsync(_settings.CorePath, "内核文件");
+                    await OpenPathLocationAsync(_settings.ActiveCorePath, "内核文件");
                     break;
                 case "openConfigLocation":
                     SaveSettingsFromMessage(root, showMessage: false);
-                    await OpenPathLocationAsync(_settings.ConfigPath, "配置文件");
+                    await OpenPathLocationAsync(_settings.ActiveConfigPath, "配置文件");
                     break;
             }
 
@@ -541,10 +549,19 @@ public sealed class MainForm : Form
 
     private void SaveSettingsFromMessage(JsonElement root, bool showMessage)
     {
-        _settings.CorePath = GetString(root, "corePath", _settings.CorePath).Trim();
-        _settings.ConfigPath = GetString(root, "configPath", _settings.ConfigPath).Trim();
-        _settings.DashboardApiUrl = GetString(root, "apiUrl", _settings.DashboardApiUrl).Trim();
-        _settings.Secret = GetString(root, "secret", _settings.Secret);
+        _settings.CoreType = AppSettings.NormalizeCoreType(GetString(root, "coreType", _settings.CoreType));
+        _settings.CorePath = GetString(root, "mihomoCorePath", _settings.CorePath).Trim();
+        _settings.ConfigPath = GetString(root, "mihomoConfigPath", _settings.ConfigPath).Trim();
+        _settings.DashboardApiUrl = GetString(root, "mihomoApiUrl", _settings.DashboardApiUrl).Trim();
+        _settings.Secret = GetString(root, "mihomoSecret", _settings.Secret);
+        _settings.SingBoxCorePath = GetString(root, "singBoxCorePath", _settings.SingBoxCorePath).Trim();
+        _settings.SingBoxConfigPath = GetString(root, "singBoxConfigPath", _settings.SingBoxConfigPath).Trim();
+        _settings.SingBoxApiUrl = GetString(root, "singBoxApiUrl", _settings.SingBoxApiUrl).Trim();
+        _settings.SingBoxSecret = GetString(root, "singBoxSecret", _settings.SingBoxSecret);
+        _settings.ActiveCorePath = GetString(root, "corePath", _settings.ActiveCorePath).Trim();
+        _settings.ActiveConfigPath = GetString(root, "configPath", _settings.ActiveConfigPath).Trim();
+        _settings.ActiveDashboardApiUrl = GetString(root, "apiUrl", _settings.ActiveDashboardApiUrl).Trim();
+        _settings.ActiveSecret = GetString(root, "secret", _settings.ActiveSecret);
         _settings.StartCoreOnLaunch = GetBool(root, "startCoreOnLaunch", _settings.StartCoreOnLaunch);
         _settings.MinimizeToTray = GetBool(root, "minimizeToTray", _settings.MinimizeToTray);
         _settings.LightweightMode = GetBool(root, "lightweightMode", _settings.LightweightMode);
@@ -580,7 +597,7 @@ public sealed class MainForm : Form
     {
         try
         {
-            if (!_mihomo.IsRunning && !IsRunningAsAdministrator())
+            if (!_core.IsRunning && !IsRunningAsAdministrator())
             {
                 _elevatedRetryPending = false;
                 _tunPermissionFailureSeen = false;
@@ -591,7 +608,7 @@ public sealed class MainForm : Form
 
             _elevatedRetryPending = !IsRunningAsAdministrator();
             _tunPermissionFailureSeen = false;
-            _mihomo.Start(_settings);
+            _core.Start(_settings);
             if (showTrayNotification)
             {
                 _trayIcon.ShowBalloonTip(1800, "Dashboard", "内核已启动", ToolTipIcon.Info);
@@ -619,10 +636,10 @@ public sealed class MainForm : Form
 
     private void StopCore(bool showTrayNotification)
     {
-        var wasRunning = _mihomo.IsRunning;
+        var wasRunning = _core.IsRunning;
         try
         {
-            _mihomo.Stop();
+            _core.Stop();
             if (showTrayNotification && wasRunning)
             {
                 _trayIcon.ShowBalloonTip(1800, "Dashboard", "内核已关闭", ToolTipIcon.Info);
@@ -642,13 +659,13 @@ public sealed class MainForm : Form
     {
         try
         {
-            if (!_mihomo.IsRunning)
+            if (!_core.IsRunning)
             {
                 StartCore();
                 return;
             }
 
-            _mihomo.Stop();
+            _core.Stop();
             StartCore();
             _ = ShowDashboardNoticeAsync("内核已重启。");
             if (showTrayNotification)
@@ -666,6 +683,54 @@ public sealed class MainForm : Form
         }
     }
 
+    private async Task SwitchCoreAsync(JsonElement root)
+    {
+        if (_coreSwitchInProgress || _coreUpgradeInProgress)
+        {
+            return;
+        }
+
+        var targetCoreType = AppSettings.NormalizeCoreType(GetString(
+            root,
+            "targetCoreType",
+            _settings.IsSingBox ? AppSettings.CoreTypeMihomo : AppSettings.CoreTypeSingBox));
+        var targetTitle = string.Equals(targetCoreType, AppSettings.CoreTypeSingBox, StringComparison.Ordinal)
+            ? "sing-box"
+            : "Mihomo Core";
+
+        _coreSwitchInProgress = true;
+        SendStateToDashboard();
+        await ShowDashboardNoticeAsync($"正在切换到 {targetTitle}。");
+
+        try
+        {
+            if (_core.IsRunning)
+            {
+                _core.Stop(TimeSpan.FromSeconds(8));
+                await Task.Delay(600);
+            }
+
+            _settings.CoreType = targetCoreType;
+            _settings.Save();
+            RefreshIconCache();
+            StartCore();
+
+            if (_core.IsRunning)
+            {
+                await ShowDashboardNoticeAsync($"已切换到 {targetTitle}。");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowDashboardNoticeAsync($"切换内核失败：{ex.Message}");
+        }
+        finally
+        {
+            _coreSwitchInProgress = false;
+            SendStateToDashboard();
+        }
+    }
+
     private async Task UpgradeCoreAsync()
     {
         if (_coreUpgradeInProgress)
@@ -673,22 +738,28 @@ public sealed class MainForm : Form
             return;
         }
 
-        var wasRunning = _mihomo.IsRunning;
+        var wasRunning = _core.IsRunning;
         var stoppedForUpgrade = false;
         _coreUpgradeInProgress = true;
         SendStateToDashboard();
-        await ShowDashboardNoticeAsync("正在升级内核，请稍候。");
+        await ShowDashboardNoticeAsync(_settings.IsSingBox
+            ? "正在升级 sing-box 内核，请稍候。"
+            : "正在升级内核，请稍候。");
 
         try
         {
-            var result = await CoreUpdater.UpgradeLatestAsync(_settings.CorePath, beforeReplace: () =>
+            var result = _settings.IsSingBox
+                ? await SingBoxUpdater.UpgradeLatestAsync(_settings.SingBoxCorePath, beforeReplace: StopRunningCoreForUpgrade)
+                : await CoreUpdater.UpgradeLatestAsync(_settings.CorePath, beforeReplace: StopRunningCoreForUpgrade);
+
+            void StopRunningCoreForUpgrade()
             {
-                if (wasRunning && _mihomo.IsRunning)
+                if (wasRunning && _core.IsRunning)
                 {
-                    _mihomo.Stop();
+                    _core.Stop(TimeSpan.FromSeconds(8));
                     stoppedForUpgrade = true;
                 }
-            });
+            }
 
             if (result.IsAlreadyLatest)
             {
@@ -706,7 +777,7 @@ public sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "升级内核失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            if (stoppedForUpgrade && !_mihomo.IsRunning)
+            if (stoppedForUpgrade && !_core.IsRunning)
             {
                 StartCore();
             }
@@ -721,12 +792,14 @@ public sealed class MainForm : Form
     private async Task WaitForApiAndNotifyAsync()
     {
         using var client = new HttpClient();
-        if (!string.IsNullOrWhiteSpace(_settings.Secret))
+        var apiUrl = _settings.ActiveDashboardApiUrl;
+        var secret = _settings.ActiveSecret;
+        if (!string.IsNullOrWhiteSpace(secret))
         {
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.Secret);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", secret);
         }
 
-        var endpoint = $"{_settings.DashboardApiUrl.TrimEnd('/')}/version";
+        var endpoint = $"{apiUrl.TrimEnd('/')}/version";
         for (var attempt = 0; attempt < 20; attempt++)
         {
             try
@@ -753,13 +826,13 @@ public sealed class MainForm : Form
 
         BeginInvoke(new Action(() =>
         {
-            _ = ShowDashboardNoticeAsync($"内核已启动，但无法连接 API：{_settings.DashboardApiUrl}");
+            _ = ShowDashboardNoticeAsync($"内核已启动，但无法连接 API：{apiUrl}");
         }));
     }
 
     private void RefreshStatus()
     {
-        var running = _mihomo.IsRunning;
+        var running = _core.IsRunning;
         _trayIcon.Text = running ? "Dashboard - 运行中" : "Dashboard - 未运行";
         SendStateToDashboard();
     }
@@ -861,19 +934,32 @@ public sealed class MainForm : Form
 
         var state = new
         {
-            isRunning = _mihomo.IsRunning,
-            processId = _mihomo.ProcessId,
-            corePath = _settings.CorePath,
-            configPath = _settings.ConfigPath,
-            apiUrl = _settings.DashboardApiUrl,
-            secret = _settings.Secret,
+            isRunning = _core.IsRunning,
+            processId = _core.ProcessId,
+            coreType = _settings.CoreType,
+            coreTitle = _settings.CoreTitle,
+            corePath = _settings.ActiveCorePath,
+            configPath = _settings.ActiveConfigPath,
+            apiUrl = _settings.ActiveDashboardApiUrl,
+            secret = _settings.ActiveSecret,
+            mihomoCorePath = _settings.CorePath,
+            mihomoConfigPath = _settings.ConfigPath,
+            mihomoApiUrl = _settings.DashboardApiUrl,
+            mihomoSecret = _settings.Secret,
+            singBoxCorePath = _settings.SingBoxCorePath,
+            singBoxConfigPath = _settings.SingBoxConfigPath,
+            singBoxApiUrl = _settings.SingBoxApiUrl,
+            singBoxSecret = _settings.SingBoxSecret,
+            readOnlyTunEnabled = _settings.IsSingBox ? IsSingBoxTunConfigured() : (bool?)null,
             startCoreOnLaunch = _settings.StartCoreOnLaunch,
             minimizeToTray = _settings.MinimizeToTray,
             lightweightMode = _settings.LightweightMode,
             autostart = _settings.Autostart,
+            canUpgradeCore = true,
             isCoreUpgrading = _coreUpgradeInProgress,
+            isCoreSwitching = _coreSwitchInProgress,
             isWindowMaximized = WindowState == FormWindowState.Maximized,
-            logText = _mihomo.GetLogTail(8000),
+            logText = _core.GetLogTail(8000),
             iconCacheMap = _iconCache.GetDashboardMap(_dashboardUri)
         };
         PostDashboardMessage(new { type = "state", state });
@@ -885,6 +971,64 @@ public sealed class MainForm : Form
             _pendingDashboardNotice = null;
             PostDashboardMessage(new { type = "notice", message });
         }
+    }
+
+    private bool IsSingBoxTunConfigured()
+    {
+        if (string.IsNullOrWhiteSpace(_settings.SingBoxConfigPath) || !File.Exists(_settings.SingBoxConfigPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(_settings.SingBoxConfigPath);
+            using var document = JsonDocument.Parse(stream, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
+
+            if (!document.RootElement.TryGetProperty("inbounds", out var inbounds)
+                || inbounds.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (var inbound in inbounds.EnumerateArray())
+            {
+                if (inbound.ValueKind != JsonValueKind.Object
+                    || !inbound.TryGetProperty("type", out var typeProperty)
+                    || typeProperty.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(typeProperty.GetString(), "tun", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (inbound.TryGetProperty("enabled", out var enabledProperty)
+                    && enabledProperty.ValueKind == JsonValueKind.False)
+                {
+                    return false;
+                }
+
+                if (inbound.TryGetProperty("disabled", out var disabledProperty)
+                    && disabledProperty.ValueKind == JsonValueKind.True)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
     }
 
     private Task ShowDashboardNoticeAsync(string message)
@@ -1046,12 +1190,14 @@ public sealed class MainForm : Form
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "选择 mihomo.exe",
-            Filter = "Mihomo executable|mihomo*.exe;clash*.exe|Executable|*.exe|All files|*.*"
+            Title = _settings.IsSingBox ? "选择 sing-box.exe" : "选择 mihomo.exe",
+            Filter = _settings.IsSingBox
+                ? "sing-box executable|sing-box*.exe|Executable|*.exe|All files|*.*"
+                : "Mihomo executable|mihomo*.exe;clash*.exe|Executable|*.exe|All files|*.*"
         };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            _settings.CorePath = dialog.FileName;
+            _settings.ActiveCorePath = dialog.FileName;
             _settings.Save();
         }
     }
@@ -1060,12 +1206,14 @@ public sealed class MainForm : Form
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "选择 config.yaml",
-            Filter = "YAML config|*.yaml;*.yml|All files|*.*"
+            Title = _settings.IsSingBox ? "选择 config.json" : "选择 config.yaml",
+            Filter = _settings.IsSingBox
+                ? "JSON config|*.json|All files|*.*"
+                : "YAML config|*.yaml;*.yml|All files|*.*"
         };
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            _settings.ConfigPath = dialog.FileName;
+            _settings.ActiveConfigPath = dialog.FileName;
             _settings.Save();
             RefreshIconCache();
         }
@@ -1108,6 +1256,11 @@ public sealed class MainForm : Form
 
     private void RefreshIconCache()
     {
+        if (_settings.IsSingBox)
+        {
+            return;
+        }
+
         var configPath = _settings.ConfigPath;
         _ = Task.Run(async () =>
         {
@@ -1331,7 +1484,7 @@ public sealed class MainForm : Form
     {
         if (disposing)
         {
-            _mihomo.Dispose();
+            _core.Dispose();
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
             _stateRefreshTimer.Dispose();
@@ -1488,5 +1641,4 @@ public sealed class MainForm : Form
 
         public static DwmMargins Empty => new();
     }
-
 }

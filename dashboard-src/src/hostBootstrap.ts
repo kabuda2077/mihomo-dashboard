@@ -1,10 +1,13 @@
 import { getBackendFromUrl } from '@/helper/utils'
 import { addBackend } from '@/store/setup'
+import { HOST_BACKEND_UPDATED_EVENT } from '@/constant/hostEvents'
 import type { Backend } from '@/types'
 
 type HostState = {
+  coreType?: string
   apiUrl?: string
   secret?: string
+  readOnlyTunEnabled?: boolean
   iconCacheMap?: Record<string, string>
 }
 
@@ -36,7 +39,12 @@ const normalizePath = (pathname: string) => {
   return path === '' || path === '/' ? '' : path
 }
 
-const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefined) => {
+const backendFromApiUrl = (
+  apiUrl: string | undefined,
+  secret: string | undefined,
+  coreType: string | undefined,
+  readOnlyTunEnabled: boolean | undefined,
+) => {
   if (!apiUrl) return null
 
   try {
@@ -47,8 +55,9 @@ const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefine
       port: url.port || (url.protocol === 'https:' ? '443' : '80'),
       secondaryPath: normalizePath(url.pathname),
       password: secret || '',
-      label: '本机内核',
+      label: coreType === 'sing-box' ? '本机 sing-box' : '本机内核',
       disableUpgradeCore: true,
+      readOnlyTunEnabled: coreType === 'sing-box' ? !!readOnlyTunEnabled : undefined,
     } satisfies Omit<Backend, 'uuid'>
   } catch {
     return null
@@ -58,6 +67,31 @@ const backendFromApiUrl = (apiUrl: string | undefined, secret: string | undefine
 const applyBackend = (backend: Omit<Backend, 'uuid'> | null, replaceExisting = false) => {
   if (!backend?.protocol || !backend.host || !backend.port) return
   addBackend(backend, { replaceExisting })
+}
+
+const applyBackendFromState = (state: HostState | undefined, replaceExisting = false) => {
+  const backend = backendFromApiUrl(
+    state?.apiUrl,
+    state?.secret,
+    state?.coreType,
+    state?.readOnlyTunEnabled,
+  )
+  applyBackend(backend, replaceExisting)
+  return backend
+}
+
+let backendSignature = ''
+const applyHostState = (state: HostState | undefined) => {
+  applyIconCache(state)
+  const backend = applyBackendFromState(state, true)
+  const nextSignature = backend
+    ? `${backend.protocol}://${backend.host}:${backend.port}${backend.secondaryPath}|${backend.password}|${state?.coreType ?? ''}`
+    : ''
+
+  if (nextSignature && nextSignature !== backendSignature) {
+    backendSignature = nextSignature
+    window.dispatchEvent(new CustomEvent(HOST_BACKEND_UPDATED_EVENT))
+  }
 }
 
 const applyIconCache = (state: HostState | undefined) => {
@@ -266,12 +300,10 @@ if (!(window as HostWindow).chrome?.webview) {
 
 installWindowChromeBridge()
 ;(window as HostWindow).__mihomoApplyBackend = (state) => {
-  applyIconCache(state)
-  applyBackend(backendFromApiUrl(state.apiUrl, state.secret), true)
+  applyHostState(state)
 }
 ;(window as HostWindow).chrome?.webview?.addEventListener?.('message', (event) => {
   if (event.data?.type === 'state') {
-    applyIconCache(event.data.state)
-    applyBackend(backendFromApiUrl(event.data.state?.apiUrl, event.data.state?.secret), true)
+    applyHostState(event.data.state)
   }
 })
