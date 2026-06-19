@@ -72,17 +72,17 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeCorePath"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="post({ ...collect(), type: 'browseCore' })"
                 >
                   选择
                 </button>
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="post({ ...collect(), type: 'openCoreLocation' })"
                 >
                   位置
@@ -95,17 +95,17 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeConfigPath"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="post({ ...collect(), type: 'browseConfig' })"
                 >
                   选择
                 </button>
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="post({ ...collect(), type: 'openConfigLocation' })"
                 >
                   位置
@@ -118,7 +118,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeApiUrl"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
               </div>
@@ -129,7 +129,7 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeSecret"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
                 <button
@@ -213,7 +213,7 @@
         </p>
         <div class="modal-action">
           <button
-            class="dashboard-action-btn"
+            class="btn btn-sm dashboard-action-btn"
             :disabled="switchPending"
             @click="showSwitchConfirm = false"
           >
@@ -269,11 +269,11 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeCorePath"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="browseSetupCore"
                 >
                   选择
@@ -286,11 +286,11 @@
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   v-model="activeConfigPath"
-                  class="dashboard-input"
+                  class="input input-sm dashboard-input"
                   type="text"
                 />
                 <button
-                  class="dashboard-action-btn"
+                  class="btn btn-sm dashboard-action-btn"
                   @click="browseSetupConfig"
                 >
                   选择
@@ -302,7 +302,7 @@
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">API 地址</div>
               <input
                 v-model="activeApiUrl"
-                class="dashboard-input"
+                class="input input-sm dashboard-input"
                 type="text"
               />
             </div>
@@ -311,7 +311,7 @@
               <div class="setting-item-label w-[4.5rem] !flex-none shrink-0">Secret</div>
               <input
                 v-model="activeSecret"
-                class="dashboard-input"
+                class="input input-sm dashboard-input"
                 type="text"
               />
             </div>

@@ -179,9 +179,9 @@ The Core page combines desktop app controls and zashboard settings.
 - Core status box border: `border-base-content/20`.
 - Core status title: `font-semibold`.
 - Runtime status text: `text-xs text-base-content/60`.
-- Core path/config/API/Secret input text: `text-base-content/60`.
+- Core path/config/API/Secret inputs: `input input-sm dashboard-input`.
 - Core log text: `text-xs leading-5 text-base-content/60`.
-- Core operation buttons: `dashboard-action-btn`.
+- Core operation buttons: `btn btn-sm dashboard-action-btn`.
 - Core and embedded backend two-column layouts should use `lg:gap-8`.
 
 Avoid introducing a second settings style in Core page. Prefer the same `settings-grid`, `setting-item`, and `settings-section-label` used elsewhere.
@@ -195,7 +195,7 @@ Avoid introducing a second settings style in Core page. Prefer the same `setting
 - Reuse one of these families before creating a new button shape.
 
 - Standard small buttons: `btn btn-sm`.
-- Neutral utility buttons in panels: `dashboard-action-btn`, which intentionally maps to `btn btn-sm bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none`.
+- Neutral utility buttons in panels: `btn btn-sm dashboard-action-btn`.
 - Primary action: `btn-primary`.
 - Start/status action: `btn-success` only where the action truly means start/running.
 - Warning/destructive stop action: `btn-warning` when it represents warning/stop rather than deletion.
@@ -208,7 +208,13 @@ Potential utility extraction candidates:
 - `surface-soft`: reusable `bg-base-200/70` inner data/control surface.
 - `text-muted`: reusable `text-base-content/60` for secondary and read-only values.
 
-Do not create more button utilities unless at least two or three call sites clearly benefit from the extraction. `dashboard-action-btn` is already the canonical soft action button.
+Do not create more button utilities unless at least two or three call sites clearly benefit from the extraction. `dashboard-action-btn` is already the canonical soft action supplement.
+
+When extracting DaisyUI control styles, keep DaisyUI base classes on the element and use project utilities only as supplements:
+
+- Good: `class="input input-sm dashboard-input"`
+- Good: `class="btn btn-sm dashboard-action-btn"`
+- Avoid: `class="dashboard-input"` or `class="dashboard-action-btn"` when the element depends on DaisyUI sizing, font, or state rules.
 
 ## Data Cards
 

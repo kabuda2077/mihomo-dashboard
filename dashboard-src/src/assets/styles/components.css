@@ -58,13 +58,11 @@ div {
 }
 
 .dashboard-input {
-  @apply input input-sm bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none;
+  @apply bg-base-200/70 text-base-content/60 min-w-0 flex-1 border-transparent shadow-none;
 }
 
 .dashboard-action-btn {
-  @apply btn btn-sm bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  @apply bg-base-200/70 hover:bg-base-200/80 border-transparent shadow-none;
 }
 
 .dashboard-note {
