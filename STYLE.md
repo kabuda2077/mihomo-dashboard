@@ -216,6 +216,8 @@ When extracting DaisyUI control styles, keep DaisyUI base classes on the element
 - Good: `class="btn btn-sm dashboard-action-btn"`
 - Avoid: `class="dashboard-input"` or `class="dashboard-action-btn"` when the element depends on DaisyUI sizing, font, or state rules.
 
+MiSans must be loaded with a valid variable font-weight range. The Vite build fixes the upstream `subsetted-fonts/MiSans-VF` CSS from invalid `font-weight: undefined` to `font-weight: 100 900`; do not work around that font issue by adding page-specific button weights.
+
 ## Data Cards
 
 - Use `bg-base-200/70` for inner read-only result rows or compact data strips.

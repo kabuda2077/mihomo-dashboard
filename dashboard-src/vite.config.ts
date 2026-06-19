@@ -23,6 +23,28 @@ const getGitCommitId = (): string => {
 
 const font = process.env.FONT || 'all'
 
+const fixMiSansVariableFontWeight = () => ({
+  name: 'fix-misans-variable-font-weight',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    if (!id.includes('MiSans-VF.css')) {
+      return null
+    }
+
+    const normalizedId = id.replace(/\\/g, '/')
+
+    if (!normalizedId.endsWith('/subsetted-fonts/MiSans-VF/MiSans-VF.css')) {
+      return null
+    }
+
+    if (!code.includes('font-weight: undefined')) {
+      return null
+    }
+
+    return code.replace(/font-weight:\s*undefined/g, 'font-weight: 100 900')
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -32,6 +54,7 @@ export default defineConfig({
   },
   base: './',
   plugins: [
+    fixMiSansVariableFontWeight(),
     vue(),
     vueJsx(),
     VitePWA({
