@@ -2,8 +2,10 @@
   <div class="h-full overflow-x-hidden overflow-y-auto">
     <CtrlsBar>
       <div
-        class="pointer-events-auto fixed top-3 flex min-h-9 max-w-full min-w-0 items-center gap-2 text-sm"
+        class="pointer-events-auto flex min-h-9 max-w-full min-w-0 items-center gap-2 text-sm"
         :style="{
+          position: topControlsLeft === null ? undefined : 'fixed',
+          top: topControlsLeft === null ? undefined : '12px',
           left: topControlsLeft === null ? undefined : `${topControlsLeft}px`,
           width: topControlsWidth === null ? undefined : `${topControlsWidth}px`,
           maxWidth: '100%',
@@ -22,13 +24,13 @@
             class="core-status-box"
           >
             <span class="font-semibold whitespace-nowrap">{{ coreTitle }}</span>
-            <span class="text-base-content/60 text-xs whitespace-nowrap">
+            <span class="text-base-content/60 min-w-0 truncate text-xs whitespace-nowrap">
               {{ runtimeStatusText }}
             </span>
           </div>
         </div>
 
-        <div class="flex h-[34px] shrink-0 items-center gap-2">
+        <div class="flex h-[34px] w-[232px] shrink-0 items-center justify-end gap-2">
           <button
             class="btn core-top-button btn-primary"
             :disabled="runtime.isCoreUpgrading || runtime.isCoreSwitching"
@@ -441,6 +443,7 @@ const logPanelRef = ref<HTMLElement>()
 const logPanelHeight = ref<number | null>(null)
 const topControlsWidth = ref<number | null>(null)
 const topControlsLeft = ref<number | null>(null)
+const compactRuntimeStatus = computed(() => (topControlsWidth.value ?? 0) < 560)
 const statusDotInset = 28
 const statusDotOpticalOffset = 2
 const windowControlsReserve = 176
@@ -463,6 +466,10 @@ const settingsScrollTo = computed(() =>
 const runtimeStatusText = computed(() => {
   if (!runtime.isRunning) {
     return '未运行'
+  }
+
+  if (compactRuntimeStatus.value) {
+    return '运行中'
   }
 
   return runtime.processId ? `运行中 / PID ${runtime.processId}` : '运行中'
