@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 export const ctrlsBottom = ref(0)
 export const dockTop = ref(0)
+const fallbackDockInset = 72
 export const usePaddingForViews = (
   config = {
     offsetTop: 8,
@@ -15,7 +16,7 @@ export const usePaddingForViews = (
   })
   const paddingBottom = computed(() => {
     if (isMiddleScreen.value) {
-      return dockTop.value + offsetBottom
+      return Math.max(dockTop.value, fallbackDockInset) + offsetBottom
     }
     return 0
   })

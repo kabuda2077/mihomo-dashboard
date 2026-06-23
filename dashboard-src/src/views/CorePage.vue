@@ -409,7 +409,7 @@ type WebViewWindow = Window & {
 
 const { padding } = usePaddingForViews({
   offsetTop: 12,
-  offsetBottom: 0,
+  offsetBottom: 12,
 })
 
 const runtime = reactive({
