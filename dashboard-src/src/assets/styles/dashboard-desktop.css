@@ -136,8 +136,25 @@
   min-height: 1.875rem;
 }
 
+.ctrls-bar .dropdown > summary {
+  @apply border-base-content/20 bg-base-100 rounded-lg border shadow-none;
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.ctrls-bar .dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ctrls-bar .dropdown > .dropdown-content {
+  @apply border-base-content/20 bg-base-100 rounded-lg border shadow-xs;
+  z-index: 50;
+}
+
 .ctrls-bar :is(.btn, .input, .select, .tab):focus,
 .ctrls-bar :is(.btn, .input, .select, .tab):focus-visible,
+.ctrls-bar .dropdown > summary:focus,
+.ctrls-bar .dropdown > summary:focus-visible,
 .ctrls-bar .tabs.tabs-xs:focus-within,
 .dashboard-input:focus,
 .dashboard-input:focus-visible,

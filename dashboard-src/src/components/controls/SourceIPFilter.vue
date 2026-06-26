@@ -1,26 +1,22 @@
 <template>
-  <select
-    class="join-item select select-sm"
+  <DropdownSelect
     v-model="sourceIPFilter"
-  >
-    <option :value="null">{{ $t('all') }}</option>
-    <option
-      v-for="opt in sourceIPOpts"
-      :key="opt.value.join(',')"
-      :value="opt.value"
-    >
-      {{ opt.label }}
-    </option>
-  </select>
+    class="shrink-0"
+    :options="dropdownOptions"
+  />
 </template>
 
 <script setup lang="ts">
+import DropdownSelect from '@/components/common/DropdownSelect.vue'
 import { getIPLabelFromMap } from '@/helper/sourceip'
 import { getConnectionSourceIP } from '@/helper'
 import { connections, sourceIPFilter } from '@/store/connections'
+import { useI18n } from 'vue-i18n'
 import * as ipaddr from 'ipaddr.js'
 import { isEqual, uniq } from 'lodash'
 import { computed, ref, watch } from 'vue'
+
+const { t } = useI18n()
 
 const sourceIPs = computed(() => {
   return uniq(connections.value.map(getConnectionSourceIP)).sort((a, b) => {
@@ -48,6 +44,14 @@ const sourceIPs = computed(() => {
   })
 })
 const sourceIPOpts = ref<{ label: string; value: string[] }[]>([])
+const dropdownOptions = computed(() => [
+  { label: t('all'), value: null },
+  ...sourceIPOpts.value.map((opt) => ({
+    label: opt.label,
+    key: opt.value.join(','),
+    value: opt.value,
+  })),
+])
 
 // do not use computed here for firefox
 watch(

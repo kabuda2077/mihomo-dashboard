@@ -46,6 +46,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import CtrlsBar from '../common/CtrlsBar.vue'
 import DialogWrapper from '../common/DialogWrapper.vue'
+import DropdownSelect from '../common/DropdownSelect.vue'
 import SegmentedControl from '../common/SegmentedControl.vue'
 import TextInput from '../common/TextInput.vue'
 
@@ -85,8 +86,7 @@ export default defineComponent({
       return every(modeList.value, (mode) => defaultModes.includes(mode.toLowerCase()))
     })
 
-    const handlerModeChange = (e: Event) => {
-      const mode = (e.target as HTMLSelectElement).value
+    const handlerModeChange = (mode: string) => {
       updateConfigs({ mode })
       if (isSingBoxCore.value && automaticDisconnection.value) {
         activeConnections.value.forEach((connection) => {
@@ -154,22 +154,18 @@ export default defineComponent({
         </button>
       )
       const modeSelect = configs.value && (
-        <select
-          class={['select select-sm', isLargeCtrlsBar.value ? 'min-w-40' : 'min-w-24']}
-          v-model={configs.value.mode}
-          onChange={handlerModeChange}
-        >
-          {modeList.value.map((mode) => {
-            return (
-              <option
-                key={mode}
-                value={mode}
-              >
-                {needTranslateModes.value ? t(mode.toLowerCase()) : mode}
-              </option>
-            )
-          })}
-        </select>
+        <DropdownSelect
+          class={isLargeCtrlsBar.value ? 'min-w-40 shrink-0' : 'min-w-24 shrink-0'}
+          modelValue={configs.value.mode}
+          onUpdate:modelValue={(value) => {
+            configs.value!.mode = value as string
+            handlerModeChange(value as string)
+          }}
+          options={modeList.value.map((mode) => ({
+            label: needTranslateModes.value ? t(mode.toLowerCase()) : mode,
+            value: mode,
+          }))}
+        />
       )
       const sort = (
         <select
@@ -224,7 +220,7 @@ export default defineComponent({
         ? `${t('searchProxyNode')} | Regex`
         : `${t('searchProxyGroup')} | Regex`
       const searchInput = (
-        <div class={['relative w-32 flex-1', isLargeCtrlsBar.value && 'max-w-80']}>
+        <div class={['relative min-w-0', isLargeCtrlsBar.value ? 'ctrls-search' : 'w-32 flex-1']}>
           <button
             class="btn btn-circle btn-ghost btn-xs absolute top-1/2 left-1 z-20 h-6 min-h-6 w-6 -translate-y-1/2 p-0"
             title={
@@ -378,7 +374,7 @@ export default defineComponent({
         <div class="flex gap-2 p-2">
           {hasProviders.value && tabs}
           {modeSelect}
-          <div class="flex flex-1">{searchInput}</div>
+          {searchInput}
           {upgradeAllIcon}
           {settingsModal}
           {toggleCollapseAll}

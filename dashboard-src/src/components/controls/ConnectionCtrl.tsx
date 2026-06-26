@@ -29,6 +29,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import CtrlsBar from '../common/CtrlsBar.vue'
 import DialogWrapper from '../common/DialogWrapper.vue'
+import DropdownSelect from '../common/DropdownSelect.vue'
 import TextInput from '../common/TextInput.vue'
 import ConnectionCardSettings from '../settings/connections/ConnectionCardSettings.vue'
 import TableSettings from '../settings/connections/TableSettings.vue'
@@ -61,22 +62,18 @@ export default defineComponent({
 
     return () => {
       const sortForCards = (
-        <div class={`join flex-1 ${isLargeCtrlsBar.value ? 'min-w-46' : ''}`}>
-          <select
-            class="join-item select select-sm flex-1"
-            v-model={connectionSortType.value}
-          >
-            {(Object.values(SORT_TYPE) as string[]).map((opt) => (
-              <option
-                key={opt}
-                value={opt}
-              >
-                {t(opt) || opt}
-              </option>
-            ))}
-          </select>
+        <div class={`flex flex-1 items-center gap-2 ${isLargeCtrlsBar.value ? 'min-w-46' : ''}`}>
+          <DropdownSelect
+            class="min-w-32 flex-1"
+            modelValue={connectionSortType.value}
+            onUpdate:modelValue={(value) => (connectionSortType.value = value as SORT_TYPE)}
+            options={(Object.values(SORT_TYPE) as string[]).map((opt) => ({
+              label: t(opt) || opt,
+              value: opt,
+            }))}
+          />
           <button
-            class="btn join-item btn-sm"
+            class="btn btn-sm"
             onClick={() => {
               connectionSortDirection.value =
                 connectionSortDirection.value === SORT_DIRECTION.ASC
@@ -159,7 +156,7 @@ export default defineComponent({
           placeholder={`${t('search')} | Regex`}
           clearable={true}
           before-close={true}
-          class={isLargeCtrlsBar.value ? 'w-32 max-w-80 flex-1' : 'w-full'}
+          class={isLargeCtrlsBar.value ? 'ctrls-search min-w-0' : 'w-full'}
         />
       )
 
@@ -218,7 +215,7 @@ export default defineComponent({
               {buttons}
             </div>
           )}
-          <div class="join w-full">
+          <div class="flex w-full items-center gap-2">
             <SourceIPFilter class="w-40" />
             {searchInput}
           </div>
@@ -228,7 +225,7 @@ export default defineComponent({
           <ConnectionTabs />
           {isConnectionCard.value && sortForCards}
           <SourceIPFilter class="w-40" />
-          <div class="flex flex-1">{searchInput}</div>
+          {searchInput}
           {settingsModal}
           {buttons}
         </div>

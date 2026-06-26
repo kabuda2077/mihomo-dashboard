@@ -29,6 +29,7 @@ import { computed, defineComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CtrlsBar from '../common/CtrlsBar.vue'
 import DialogWrapper from '../common/DialogWrapper.vue'
+import DropdownSelect from '../common/DropdownSelect.vue'
 import TextInput from '../common/TextInput.vue'
 
 export default defineComponent({
@@ -134,26 +135,24 @@ export default defineComponent({
 
     return () => {
       const levelSelect = (
-        <select
-          class={['join-item select select-sm min-w-30']}
-          v-model={logLevel.value}
-          onChange={initLogs}
-        >
-          {logLevels.value.map((opt) => (
-            <option
-              key={opt}
-              value={opt}
-            >
-              {opt}
-            </option>
-          ))}
-        </select>
+        <DropdownSelect
+          class="min-w-30 shrink-0"
+          modelValue={logLevel.value}
+          onUpdate:modelValue={(value) => {
+            logLevel.value = value as LOG_LEVEL
+            initLogs()
+          }}
+          options={logLevels.value.map((opt) => ({
+            label: opt,
+            value: opt,
+          }))}
+        />
       )
       const searchInput = (
         <TextInput
           v-model={logFilter.value}
           beforeClose={true}
-          class="flex-1"
+          class="ctrls-search min-w-0"
           placeholder={`${t('search')} | Regex`}
           clearable={true}
           menus={logSearchHistory.value}
@@ -163,35 +162,24 @@ export default defineComponent({
       )
 
       const logTypeSelect = (
-        <select
-          class={[
-            'join-item select select-sm',
-            isLargeCtrlsBar.value ? 'w-36' : 'w-24 max-w-40 flex-1',
+        <DropdownSelect
+          class={isLargeCtrlsBar.value ? 'w-36 shrink-0' : 'min-w-24 max-w-40 flex-1'}
+          modelValue={logTypeFilter.value}
+          onUpdate:modelValue={(value) => (logTypeFilter.value = value as string)}
+          options={[
+            { label: t('all'), value: '' },
+            ...logFilterOptions.value.levels.map((opt) => ({
+              label: opt,
+              key: `level-${opt}`,
+              value: opt,
+            })),
+            ...logFilterOptions.value.types.map((opt) => ({
+              label: opt,
+              key: `type-${opt}`,
+              value: opt,
+            })),
           ]}
-          v-model={logTypeFilter.value}
-        >
-          <option value="">{t('all')}</option>
-          <optgroup label={t('logLevel')}>
-            {logFilterOptions.value.levels.map((opt) => (
-              <option
-                key={opt}
-                value={opt}
-              >
-                {opt}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label={t('logType')}>
-            {logFilterOptions.value.types.map((opt) => (
-              <option
-                key={opt}
-                value={opt}
-              >
-                {opt}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+        />
       )
 
       const settingsModal = (
@@ -294,10 +282,10 @@ export default defineComponent({
       const content = !isLargeCtrlsBar.value ? (
         <div class="flex flex-col gap-2 p-2">
           <div class="flex w-full justify-between gap-2">
-            <div class="join flex-1">{levelSelect}</div>
+            <div class="flex flex-1">{levelSelect}</div>
             {buttons}
           </div>
-          <div class="join">
+          <div class="flex w-full items-center gap-2">
             {logTypeSelect}
             {searchInput}
           </div>
@@ -306,7 +294,7 @@ export default defineComponent({
         <div class="flex items-center justify-between gap-2 p-2">
           <div class="flex items-center gap-2">
             {levelSelect}
-            <div class="join w-96">
+            <div class="flex items-center gap-2">
               {logTypeSelect}
               {searchInput}
             </div>

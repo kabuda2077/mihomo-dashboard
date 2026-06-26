@@ -142,6 +142,7 @@ Top bars are rendered through `CtrlsBar`.
   - `max-width: min(20rem, 32vw)`
 - Top bar inputs and selects should reuse the shared rule:
   - `border-base-content/20 bg-base-100 rounded-lg border shadow-none`
+- Top bar dropdowns should prefer `DropdownSelect` instead of native `<select>` when the popup needs a controlled border, spacing, or selected indicator. Native WebView select popups are not reliably styleable.
 - Top bar circular buttons use:
   - `bg-base-100 shadow-xs hover:bg-base-200`
   - width/height `2.25rem`
