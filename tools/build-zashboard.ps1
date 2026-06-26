@@ -26,6 +26,8 @@ foreach ($relativePath in $requiredFiles) {
     }
 }
 
+& (Join-Path $repoRoot 'tools\check-dashboard-css-contract.ps1')
+
 if ($SkipBuild) {
     Write-Host 'dashboard source check completed.'
     return

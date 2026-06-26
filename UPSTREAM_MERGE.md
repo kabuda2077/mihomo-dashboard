@@ -43,7 +43,7 @@ Use this priority:
 Current embedded zashboard baseline:
 
 ```text
-dashboard-src/package.json: 3.10.1
+dashboard-src/package.json: 3.11.0
 ```
 
 The desktop app is not pure zashboard. It consists of:
@@ -107,6 +107,7 @@ Do not overwrite these with upstream code.
 - `dashboard-src/src/hostBootstrap.ts`
 - `dashboard-src/src/views/CorePage.vue`
 - `dashboard-src/src/components/common/WindowControls.vue`
+- `dashboard-src/src/assets/styles/dashboard-desktop.css`
 - `STYLE.md`
 - `UPSTREAM_MERGE.md`
 - desktop-specific settings and C# bridge behavior
@@ -127,6 +128,8 @@ These often contain both upstream value and local layout changes. Always inspect
 - `dashboard-src/src/components/controls/ConnectionCtrl.tsx`
 - `dashboard-src/src/components/controls/LogsCtrl.tsx`
 - `dashboard-src/src/assets/styles/override.css`
+- `dashboard-src/src/assets/styles/components.css`
+- `dashboard-src/src/assets/main.css`
 
 For these files, copy the upstream behavior, not blindly the whole file.
 
@@ -167,6 +170,7 @@ Keep upstream improvements when they fit our style system:
 
 Reconcile these with local rules:
 
+- `dashboard-desktop.css` is the final desktop override layer and must remain imported last
 - top bar controls use shared `CtrlsBar` behavior
 - top bar controls are 36px high
 - top bar borders use `border-base-content/20`
@@ -198,6 +202,12 @@ Run full build:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+Run the desktop CSS contract check directly when touching styles:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\check-dashboard-css-contract.ps1
 ```
 
 Manual inspection checklist:
@@ -237,6 +247,8 @@ Merge:
 UI:
 
 - [ ] Upstream visual changes pass `STYLE.md`.
+- [ ] `dashboard-src/src/assets/styles/dashboard-desktop.css` still exists and remains the last import in `dashboard-src/src/assets/main.css`.
+- [ ] Desktop CSS contract check passed.
 - [ ] Top bars still use shared `CtrlsBar` rules.
 - [ ] Settings still use `settings-grid`, `setting-item`, and `settings-section-label`.
 - [ ] New buttons, inputs, panels, and text colors reuse existing tokens/utilities.

@@ -10,6 +10,7 @@ This project embeds a customized zashboard UI inside a Windows desktop shell. UI
 - Prefer zashboard's existing component patterns over page-local custom styling.
 - Keep desktop shell visuals and frontend visuals in the same DOM/CSS system whenever possible. C# should provide window APIs; frontend should own visual layout.
 - When following upstream zashboard UI changes, keep the upstream behavior where possible but express the final visuals through this guide's existing tokens, utilities, and component patterns.
+- Dashboard.exe-owned CSS utilities live in `dashboard-src/src/assets/styles/dashboard-desktop.css`. This file is imported last and is part of the desktop product contract, not an upstream zashboard file.
 
 ## Layout
 
@@ -79,6 +80,8 @@ Use only two broad panel families for custom desktop/Core UI:
 
 Do not introduce a third card-like container with different padding, border, or background just for one Core page area.
 
+Desktop-only surfaces and Core-page utilities are defined in `dashboard-src/src/assets/styles/dashboard-desktop.css`. Upstream merges may update zashboard's shared style files, but they must not remove or overwrite this desktop layer.
+
 ## Typography
 
 Keep type hierarchy restrained.
@@ -123,6 +126,8 @@ When adding or changing UI, prefer these existing patterns first:
 If a new pattern is unavoidable, document why it is different from the canonical set above.
 
 During upstream merges, do not accept a new upstream visual pattern only because it exists upstream. First map it to the canonical set above. If it cannot be mapped, document the reusable reason before adding a project utility.
+
+The desktop CSS contract must pass before publishing. The build runs `tools/check-dashboard-css-contract.ps1`, which verifies that `dashboard-desktop.css` is imported last and still defines the required `dashboard-*`, `core-*`, `ctrls-*`, and settings utilities used by Core page and the desktop shell.
 
 ## Top Bar
 

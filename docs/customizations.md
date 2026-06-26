@@ -34,6 +34,7 @@ Preserve these frontend product decisions:
 - The Core page supports both mihomo and sing-box through Clash-compatible API assumptions.
 - Top bars are desktop-aware and must not collide with custom window buttons.
 - Window control buttons are custom frontend controls connected to C# host APIs.
+- Desktop/Core CSS utilities are isolated in `dashboard-src/src/assets/styles/dashboard-desktop.css`, which is imported after upstream styles.
 
 ## Keep From Upstream
 
@@ -63,6 +64,7 @@ These areas often contain both upstream value and local behavior. Review them li
 - Core page and embedded backend settings.
 - Top bar, sidebar, and window control components.
 - Shared style files under `dashboard-src/src/assets/styles/`.
+- `dashboard-src/src/assets/main.css`, because import order decides whether desktop overrides survive upstream changes.
 - Host bootstrap and desktop bridge code.
 - Any upstream change that touches settings, backend selection, DNS tools, or native desktop assumptions.
 
@@ -75,6 +77,8 @@ These areas often contain both upstream value and local behavior. Review them li
 - Keep neutral operation buttons on `btn btn-sm dashboard-action-btn`.
 - Keep Core top buttons as the documented semantic exception: switch `primary`, start `success`, stop `warning`.
 - Keep MiSans variable font fix in the build pipeline; do not compensate with page-local font-weight hacks.
+- Keep `dashboard-desktop.css` as the final local style layer. Do not move `dashboard-*`, `core-*`, or `ctrls-*` utilities back into upstream-owned style files.
+- Run `tools/check-dashboard-css-contract.ps1` after any upstream style merge or Core page layout change.
 
 ## Publish And Resource Rules
 
