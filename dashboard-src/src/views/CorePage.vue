@@ -24,7 +24,7 @@
           <div
             class="core-status-box"
           >
-            <span class="font-semibold whitespace-nowrap">{{ coreTitle }}</span>
+            <span class="min-w-0 shrink truncate font-semibold whitespace-nowrap">{{ coreTitle }}</span>
             <span class="text-base-content/60 min-w-0 truncate text-xs whitespace-nowrap">
               {{ runtimeStatusText }}
             </span>

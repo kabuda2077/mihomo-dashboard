@@ -18,7 +18,7 @@
         />
         <ul
           ref="menuRef"
-          class="sidebar-route-menu menu h-full w-full"
+          class="sidebar-route-menu menu flex h-full w-full flex-col gap-1"
         >
           <li
             v-for="r in renderRoutes"

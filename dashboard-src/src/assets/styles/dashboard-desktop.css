@@ -61,7 +61,7 @@
 }
 
 .core-status-box {
-  @apply border-base-content/20 bg-base-100 flex h-9 w-full min-w-0 items-center gap-3 rounded-lg border px-3 pr-4 shadow-none;
+  @apply border-base-content/20 bg-base-100 flex h-9 w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border px-3 pr-4 shadow-none;
 }
 
 .core-top-button {

@@ -45,6 +45,20 @@ if ($mainTs -notmatch "import\s+['""]\./hostBootstrap['""]") {
     throw "dashboard source check failed: src\main.ts must import ./hostBootstrap for desktop window drag/resize and host state"
 }
 
+$sidebarButtonsPath = Join-Path $sourceRoot 'src\components\sidebar\SidebarButtons.vue'
+$sidebarButtons = Get-Content -LiteralPath $sidebarButtonsPath -Raw
+foreach ($pattern in @('showBackendSettingsDialog', 'BackendSettings', 'ServerIcon')) {
+    if ($sidebarButtons -match $pattern) {
+        throw "dashboard source check failed: sidebar backend settings button should not be restored"
+    }
+}
+
+$commonCtrlPath = Join-Path $sourceRoot 'src\components\sidebar\CommonCtrl.vue'
+$commonCtrl = Get-Content -LiteralPath $commonCtrlPath -Raw
+if ($commonCtrl -match 'BackendVersion') {
+    throw "dashboard source check failed: sidebar backend version should not be restored"
+}
+
 $forbiddenSourcePatterns = @(
     'DnsQuery',
     'DNSQuery',
