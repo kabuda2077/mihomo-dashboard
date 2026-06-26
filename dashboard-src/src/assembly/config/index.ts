@@ -35,7 +35,6 @@ export const updateConfigs = async (cfg: Record<string, string | boolean | objec
 export {
   flushDNSCacheAPI,
   flushFakeIPAPI,
-  queryDNSAPI,
   reloadConfigsAPI,
   updateConfigsAPI,
   updateGeoDataAPI,

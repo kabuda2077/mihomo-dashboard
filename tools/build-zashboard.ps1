@@ -26,10 +26,45 @@ foreach ($relativePath in $requiredFiles) {
     }
 }
 
+$forbiddenFiles = @(
+    'src\views\SettingsPage.vue',
+    'src\components\controls\SettingsCtrl.vue',
+    'src\components\settings\backend\DnsQuery.vue'
+)
+
+foreach ($relativePath in $forbiddenFiles) {
+    $path = Join-Path $sourceRoot $relativePath
+    if (Test-Path -LiteralPath $path) {
+        throw "dashboard source check failed: $relativePath should not be restored in the desktop build"
+    }
+}
+
 $mainTsPath = Join-Path $sourceRoot 'src\main.ts'
 $mainTs = Get-Content -LiteralPath $mainTsPath -Raw
 if ($mainTs -notmatch "import\s+['""]\./hostBootstrap['""]") {
     throw "dashboard source check failed: src\main.ts must import ./hostBootstrap for desktop window drag/resize and host state"
+}
+
+$forbiddenSourcePatterns = @(
+    'DnsQuery',
+    'DNSQuery',
+    'queryDNSAPI',
+    'dns-query',
+    'dnsQuery',
+    'SINGBOX_NATIVE',
+    'SingBoxNative'
+)
+
+$sourceFiles = Get-ChildItem -LiteralPath (Join-Path $sourceRoot 'src') -Recurse -File |
+    Where-Object { $_.Extension -in '.ts', '.tsx', '.vue' }
+
+foreach ($pattern in $forbiddenSourcePatterns) {
+    $match = $sourceFiles |
+        Select-String -Pattern $pattern -SimpleMatch |
+        Select-Object -First 1
+    if ($match) {
+        throw "dashboard source check failed: forbidden pattern '$pattern' found in $($match.Path)"
+    }
 }
 
 & (Join-Path $repoRoot 'tools\check-dashboard-css-contract.ps1')

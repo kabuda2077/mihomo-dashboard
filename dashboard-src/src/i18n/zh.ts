@@ -287,7 +287,6 @@ const zh: LANG_MESSAGE = {
   secondaryPath: '二级路径',
   secondaryPathTip: '如果有的话以/开头，没有则留空不填',
   logRetentionLimit: '日志保留条数',
-  DNSQuery: 'DNS 查询',
   currentBackendUnavailable: '当前后端不可用，尝试切换到其他后端?',
   confirm: '确定',
   backendSwitchTo: '已切换后端为{backend}',

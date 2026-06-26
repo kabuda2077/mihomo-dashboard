@@ -288,7 +288,6 @@ const ru: LANG_MESSAGE = {
   secondaryPath: 'Дополнительный путь',
   secondaryPathTip: 'Если присутствует, начните с "/", в противном случае оставьте пустым.',
   logRetentionLimit: 'Лимит хранения журнала',
-  DNSQuery: 'DNS-запрос',
   currentBackendUnavailable:
     'Текущий бэкенд недоступен. Попробуйте переключиться на другой бэкенд?',
   confirm: 'Подтвердить',

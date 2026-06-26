@@ -286,7 +286,6 @@ const en = {
   secondaryPath: 'Secondary path',
   secondaryPathTip: 'If present, start with "/", otherwise leave empty.',
   logRetentionLimit: 'Log retention limit',
-  DNSQuery: 'DNS query',
   currentBackendUnavailable:
     'The current backend is unavailable. Would you like to switch to another backend?',
   confirm: 'Confirm',

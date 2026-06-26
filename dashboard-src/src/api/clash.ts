@@ -3,7 +3,6 @@ import { activeBackend } from '@/store/setup'
 import type {
   Backend,
   Config,
-  DNSQuery,
   NodeRank,
   Proxy,
   ProxyProvider,
@@ -161,12 +160,6 @@ export const upgradeCoreAPI = (type: 'release' | 'alpha' | 'auto') => {
 
 export const restartCoreAPI = () => {
   return axios.post('/restart')
-}
-
-export const queryDNSAPI = (params: { name: string; type: string }) => {
-  return axios.get<DNSQuery>('/dns/query', {
-    params,
-  })
 }
 
 export const getStorageAPI = () => {
