@@ -19,7 +19,7 @@ This project embeds a customized zashboard UI inside a Windows desktop shell. UI
   - Collapsed: `w-18`
 - Sidebar width transitions use `duration-320 ease-[cubic-bezier(0.34,0.1,0.2,1)]`.
 - Main content uses page padding of `p-3` and card/grid gaps of `gap-3`.
-- Two-column settings/dashboard layouts should use `lg:gap-8` by default. Avoid returning to `lg:gap-12` unless a page has a documented layout reason.
+- Two-column settings/dashboard layouts should use `lg:gap-8` by default.
 - Wide content containers should usually use `mx-auto w-full max-w-7xl`.
 - Avoid nested cards. Use cards for repeated items, modals, and framed tools only.
 
@@ -162,10 +162,14 @@ Settings should follow the shared settings system.
 - Group title outside cards: `settings-section-label`
 - Card wrapper: `settings-grid`
 - Row: `setting-item`
+- Custom content row: `setting-panel-row`
 - Row label: `setting-item-label`
 - Row minimum height: `min-h-11`
 - Row horizontal padding: `px-4`
 - Row gap: `gap-3`
+- Custom content inside a `settings-grid` must still be wrapped by a standard `setting-item`
+  or `setting-panel-row`. The custom child may handle its own inner layout,
+  but it should not own the card's outer horizontal padding.
 
 Backend/Core settings are embedded into the Core page, but they should still use these shared settings classes.
 

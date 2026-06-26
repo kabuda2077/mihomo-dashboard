@@ -1,14 +1,10 @@
 <template>
-  <div
-    ref="containerRef"
-    class="border-base-border grid min-h-[5.5rem] items-center gap-2 border-b p-2 last:border-b-0"
-  >
-    <div :class="gridClass">
+  <div class="grid min-h-[5.5rem] w-full items-center gap-2">
+    <div class="grid grid-cols-2 gap-2 md:grid-cols-5">
       <div
-        v-for="(port, index) in ports"
+        v-for="port in ports"
         :key="port.key"
         class="rounded-box bg-base-200/70 grid gap-1 p-2"
-        :class="getPortTileLayoutClass(index)"
       >
         <label
           :for="`port-${port.key}`"
@@ -33,8 +29,6 @@
 
 <script setup lang="ts">
 import { configs, updateConfigs } from '@/store/config'
-import { useElementSize } from '@vueuse/core'
-import { computed, ref } from 'vue'
 
 type PortKey = 'mixed-port' | 'port' | 'socks-port' | 'redir-port' | 'tproxy-port'
 
@@ -65,50 +59,6 @@ const ports: PortItem[] = [
     key: 'tproxy-port',
   },
 ]
-
-const containerRef = ref<HTMLElement | null>(null)
-const { width } = useElementSize(containerRef)
-
-const layoutMode = computed(() => {
-  if (width.value >= 560) return 'five'
-  if (width.value >= 320) return 'three-two'
-  return 'two-two-one'
-})
-
-const gridClass = computed(() => {
-  if (layoutMode.value === 'five') {
-    return 'grid grid-cols-5 gap-2'
-  }
-
-  if (layoutMode.value === 'three-two') {
-    return 'grid grid-cols-6 gap-2'
-  }
-
-  return 'grid grid-cols-2 gap-2'
-})
-
-const getPortTileLayoutClass = (index: number) => {
-  if (layoutMode.value === 'five') {
-    return 'col-span-1'
-  }
-
-  if (layoutMode.value === 'three-two') {
-    return [
-      'col-span-2',
-      {
-        'col-start-2': index === 3,
-        'col-start-4': index === 4,
-      },
-    ]
-  }
-
-  return [
-    'col-span-1',
-    {
-      'col-span-2 w-full max-w-[calc(50%-0.25rem)] justify-self-center': index === 4,
-    },
-  ]
-}
 
 const handleChange = (key: PortKey, event: Event) => {
   const value = Number((event.target as HTMLInputElement).value)

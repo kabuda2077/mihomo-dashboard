@@ -2,6 +2,7 @@
   <div class="h-full overflow-x-hidden overflow-y-auto">
     <CtrlsBar>
       <div
+        ref="topControlsRef"
         class="pointer-events-auto flex min-h-9 max-w-full min-w-0 items-center gap-2 text-sm"
         :style="{
           position: topControlsLeft === null ? undefined : 'fixed',
@@ -60,11 +61,11 @@
     </CtrlsBar>
     <div
       class="mx-auto flex w-full max-w-7xl flex-col gap-3 p-3"
-      :style="padding"
+      :style="coreContentPadding"
     >
       <div class="grid items-start gap-3 lg:grid-cols-2 lg:gap-8">
-        <section class="rounded-lg p-2">
-          <h2 class="mt-1 mb-3 px-1 text-lg font-semibold">启动配置</h2>
+        <div class="rounded-lg p-2">
+          <h2 class="dashboard-section-title">启动配置</h2>
           <div
             ref="configPanelRef"
             class="settings-grid"
@@ -180,21 +181,23 @@
               />
             </div>
           </div>
-        </section>
+        </div>
 
-        <section class="rounded-lg p-2">
-          <h2 class="mt-1 mb-3 px-1 text-lg font-semibold">内核日志</h2>
+        <div class="rounded-lg p-2">
+          <h2 class="dashboard-section-title">内核日志</h2>
           <div
             ref="logPanelRef"
-            class="settings-grid p-4"
+            class="settings-grid"
             :style="logPanelHeight ? { height: `${logPanelHeight}px` } : undefined"
           >
-            <pre
-              class="dashboard-log-block"
-              >{{ runtime.logText || '暂无日志' }}</pre
-            >
+            <div class="setting-panel-row h-full min-h-0">
+              <pre
+                class="dashboard-log-block"
+                >{{ runtime.logText || '暂无日志' }}</pre
+              >
+            </div>
           </div>
-        </section>
+        </div>
       </div>
 
       <SettingsContent
@@ -407,8 +410,8 @@ type WebViewWindow = Window & {
   __mihomoControlNotice?: (message: string) => void
 }
 
-const { padding } = usePaddingForViews({
-  offsetTop: 24,
+const { paddingBottom } = usePaddingForViews({
+  offsetTop: 0,
   offsetBottom: 0,
 })
 
@@ -440,12 +443,15 @@ const settings = reactive({
 
 const configPanelRef = ref<HTMLElement>()
 const logPanelRef = ref<HTMLElement>()
+const topControlsRef = ref<HTMLElement>()
 const logPanelHeight = ref<number | null>(null)
 const topControlsWidth = ref<number | null>(null)
 const topControlsLeft = ref<number | null>(null)
+const topControlsBottom = ref(0)
 const compactRuntimeStatus = computed(() => (topControlsWidth.value ?? 0) < 560)
 const statusDotInset = 28
 const statusDotOpticalOffset = 2
+const topControlsContentGap = 16
 const windowControlsReserve = 176
 const chromeRightPadding = 12
 const showSwitchConfirm = ref(false)
@@ -462,6 +468,17 @@ const route = useRoute()
 const settingsScrollTo = computed(() =>
   typeof route.query.scrollTo === 'string' ? route.query.scrollTo : null,
 )
+const coreContentPadding = computed(() => {
+  const nextPadding: Record<string, string> = {
+    paddingTop: `${topControlsBottom.value + topControlsContentGap}px`,
+  }
+
+  if (paddingBottom.value) {
+    nextPadding.paddingBottom = `${paddingBottom.value}px`
+  }
+
+  return nextPadding
+})
 
 const runtimeStatusText = computed(() => {
   if (!runtime.isRunning) {
@@ -688,6 +705,10 @@ const syncLogHeight = () => {
     const availableRight = window.innerWidth - windowControlsReserve - chromeRightPadding
     const availableWidth = Math.floor(availableRight - rowLeft)
     topControlsWidth.value = Math.max(280, Math.min(desiredWidth, availableWidth))
+
+    if (topControlsRef.value) {
+      topControlsBottom.value = Math.ceil(topControlsRef.value.getBoundingClientRect().bottom)
+    }
 
     if (logPanel) {
       logPanelHeight.value = Math.round(configPanel.offsetHeight)

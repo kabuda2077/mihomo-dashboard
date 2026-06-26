@@ -1,5 +1,5 @@
 <template>
-  <div class="grid h-full min-h-[112px] w-full grid-rows-2 gap-2">
+  <div class="grid h-full min-h-[232px] w-full grid-rows-4 gap-2">
     <template v-if="displayConnections.length">
       <div
         v-for="(connection, index) in displayConnections"
@@ -38,7 +38,7 @@
     </template>
     <div
       v-else
-      class="text-base-content/60 col-span-full row-span-2 flex h-full min-h-[112px] items-center justify-center text-sm"
+      class="text-base-content/60 col-span-full row-span-4 flex h-full min-h-[232px] items-center justify-center text-sm"
     >
       暂无下载中的连接
     </div>
@@ -61,7 +61,7 @@ const displayOptions = computed(() => ({
 }))
 
 const displayConnections = ref<Connection[]>([])
-const displayLimit = 2
+const displayLimit = 4
 
 const cloneConnection = (connection: Connection, downloadSpeed = connection.downloadSpeed) => ({
   ...connection,

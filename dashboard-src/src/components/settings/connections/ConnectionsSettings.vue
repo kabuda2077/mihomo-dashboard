@@ -76,10 +76,20 @@
       </template>
       <SourceIPLabels />
     </div>
+
+    <template v-if="configs && canShowPortsGrid">
+      <div class="settings-section-label">端口设置</div>
+      <div class="settings-grid">
+        <div class="setting-panel-row">
+          <BackendPortsGrid />
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import BackendPortsGrid from '@/components/settings/backend/BackendPortsGrid.vue'
 import SourceIPLabels from '@/components/settings/connections/SourceIPLabels.vue'
 import {
   CONNECTION_DISPLAY_STYLE,
@@ -94,4 +104,18 @@ import {
   tableSize,
   tableWidthMode,
 } from '@/store/settings'
+import { configs } from '@/store/config'
+import { computed } from 'vue'
+
+type PortConfigKey = 'mixed-port' | 'port' | 'socks-port' | 'redir-port' | 'tproxy-port'
+const portConfigKeys: PortConfigKey[] = [
+  'mixed-port',
+  'port',
+  'socks-port',
+  'redir-port',
+  'tproxy-port',
+]
+const canShowPortsGrid = computed(() =>
+  portConfigKeys.some((key) => typeof configs.value?.[key] === 'number'),
+)
 </script>

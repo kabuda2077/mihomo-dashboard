@@ -41,6 +41,11 @@ div {
   @apply px-1 pt-5 pb-1.5 text-xs font-semibold tracking-wider uppercase first:pt-2;
   color: color-mix(in srgb, var(--color-base-content) 60%, transparent);
 }
+
+.dashboard-section-title {
+  @apply mt-1 mb-3 px-1 text-lg font-semibold;
+}
+
 .settings-grid {
   @apply bg-base-100 grid grid-cols-1 overflow-hidden rounded-xl;
 }
@@ -54,6 +59,13 @@ div {
     svg {
       @apply inline-block;
     }
+  }
+}
+
+.setting-panel-row {
+  @apply border-base-border block min-h-11 border-b px-4 py-3;
+  &:last-child {
+    border-bottom: none;
   }
 }
 

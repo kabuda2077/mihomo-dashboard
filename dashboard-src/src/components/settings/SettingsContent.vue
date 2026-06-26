@@ -4,8 +4,8 @@
     class="w-full"
   >
     <div
-      :id="itemId(backendItem.key)"
-      :data-key="backendItem.key"
+      :id="itemId(SETTINGS_MENU_KEY.backend)"
+      :data-key="SETTINGS_MENU_KEY.backend"
       class="mx-auto mb-4 w-full max-w-7xl md:mb-6"
     >
       <BackendSettings />
@@ -38,13 +38,13 @@
         >
           <div
             v-for="item in collapsibleItems.filter((_, i) => columnAssignment[i] === col)"
-            :id="itemId(item.key)"
+            :id="collapsibleItemId(item.key)"
             :key="item.key"
             :data-key="item.key"
             class="mb-4 rounded-lg p-2 md:mb-6"
           >
             <div
-              v-if="![SETTINGS_MENU_KEY.general, SETTINGS_MENU_KEY.backend].includes(item.key)"
+              v-if="item.key !== SETTINGS_MENU_KEY.general"
               class="mt-1 mb-3 px-1 text-lg font-semibold"
             >
               {{ $t(item.label) }}
@@ -61,13 +61,13 @@
     >
       <div
         v-for="item in collapsibleItems"
-        :id="itemId(item.key)"
+        :id="collapsibleItemId(item.key)"
         :key="item.key"
         :data-key="item.key"
         class="mb-4 md:mb-6"
       >
         <div
-          v-if="![SETTINGS_MENU_KEY.general, SETTINGS_MENU_KEY.backend].includes(item.key)"
+          v-if="item.key !== SETTINGS_MENU_KEY.general"
           class="mt-1 mb-3 px-1 text-lg font-semibold"
         >
           {{ $t(item.label) }}
@@ -127,11 +127,6 @@ const menuItems = computed<MenuItem[]>(() => {
       component: OverviewSettings,
     },
     {
-      key: SETTINGS_MENU_KEY.backend,
-      label: 'backendSettings',
-      component: BackendSettings,
-    },
-    {
       key: SETTINGS_MENU_KEY.proxies,
       label: 'proxySettings',
       component: ProxiesSettings,
@@ -144,20 +139,15 @@ const menuItems = computed<MenuItem[]>(() => {
   ]
 })
 
-const backendItem = computed<MenuItem>(() => {
-  return (
-    menuItems.value.find((item) => item.key === SETTINGS_MENU_KEY.backend) ?? menuItems.value[0]
-  )
-})
-
 const collapsibleItems = computed<MenuItem[]>(() => {
-  return menuItems.value.filter((item) => item.key !== SETTINGS_MENU_KEY.backend)
+  return menuItems.value
 })
 
 const settingsExpanded = ref(false)
 const columnAssignment = ref<number[]>(collapsibleItems.value.map((_, i) => i % 2))
 
 const itemId = (key: SETTINGS_MENU_KEY) => `${props.idPrefix}-${key}`
+const collapsibleItemId = (key: SETTINGS_MENU_KEY) => itemId(key)
 const shouldExpandForKey = (key: string | null | undefined) => {
   return collapsibleItems.value.some((item) => item.key === key)
 }
@@ -170,7 +160,7 @@ const rebalanceColumns = async () => {
   await nextTick()
   const colHeights = [0, 0]
   columnAssignment.value = collapsibleItems.value.map((item) => {
-    const el = document.getElementById(itemId(item.key))
+    const el = document.getElementById(collapsibleItemId(item.key))
     const h = el?.offsetHeight ?? 0
     const col = colHeights[0] <= colHeights[1] ? 0 : 1
     colHeights[col] += h

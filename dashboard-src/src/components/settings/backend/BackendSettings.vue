@@ -1,23 +1,22 @@
 <template>
   <!-- backend -->
   <div class="rounded-lg p-2 text-sm">
-    <div class="mt-1 mb-3 px-1 text-lg font-semibold">
-      <a
-        class="inline-flex cursor-pointer items-center gap-2"
-        :href="
-          isSingBox
-            ? 'https://github.com/sagernet/sing-box'
-            : MIHOMO_CHANNEL[mihomo?.[0] ?? MIHOMO.Meta].url
-        "
-        target="_blank"
-      >
-        {{ $t('backend') }}
-        <BackendVersion class="text-sm font-normal" />
-      </a>
-    </div>
-
-    <div class="grid items-start gap-3 lg:grid-cols-2 lg:gap-8">
-      <div>
+    <div class="grid items-stretch gap-3 lg:grid-cols-2 lg:gap-8">
+      <div class="rounded-lg p-2">
+        <div class="dashboard-section-title">
+          <a
+            class="inline-flex cursor-pointer items-center gap-2"
+            :href="
+              isSingBox
+                ? 'https://github.com/sagernet/sing-box'
+                : MIHOMO_CHANNEL[mihomo?.[0] ?? MIHOMO.Meta].url
+            "
+            target="_blank"
+          >
+            {{ $t('backend') }}
+            <BackendVersion class="text-sm font-normal" />
+          </a>
+        </div>
         <div
           v-if="configs"
           class="settings-grid"
@@ -56,83 +55,82 @@
 
         <div class="settings-section-label">操作</div>
         <div class="settings-grid">
-          <div class="grid grid-cols-1 gap-2 px-4 py-3 md:grid-cols-2">
-            <button
-              v-if="coreHostActions"
-              class="btn btn-sm dashboard-action-btn"
-              :disabled="!coreHostActions.isRunning.value || coreHostActions.isCoreUpgrading.value"
-              @click="coreHostActions.restartCore"
-            >
-              重启内核
-            </button>
-            <button
-              v-if="coreHostActions?.canUpgradeCore.value"
-              class="btn btn-sm dashboard-action-btn"
-              :disabled="coreHostActions.isCoreUpgrading.value"
-              @click="coreHostActions.upgradeCore"
-            >
-              <span
-                v-if="coreHostActions.isCoreUpgrading.value"
-                class="loading loading-spinner loading-xs"
-              />
-              {{ coreHostActions.isCoreUpgrading.value ? '升级中' : '升级内核' }}
-            </button>
-            <button
-              class="btn btn-sm dashboard-action-btn"
-              @click="handlerClickReloadConfigs"
-            >
-              <span
-                v-if="isConfigReloading"
-                class="loading loading-spinner loading-md"
-              ></span>
-              {{ $t('reloadConfigs') }}
-            </button>
-            <template v-if="!isSingBox || displayAllFeatures">
+          <div class="setting-panel-row">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
               <button
+                v-if="coreHostActions"
                 class="btn btn-sm dashboard-action-btn"
-                @click="handlerClickUpdateGeo"
+                :disabled="!coreHostActions.isRunning.value || coreHostActions.isCoreUpgrading.value"
+                @click="coreHostActions.restartCore"
+              >
+                重启内核
+              </button>
+              <button
+                v-if="coreHostActions?.canUpgradeCore.value"
+                class="btn btn-sm dashboard-action-btn"
+                :disabled="coreHostActions.isCoreUpgrading.value"
+                @click="coreHostActions.upgradeCore"
               >
                 <span
-                  v-if="isGeoUpdating"
+                  v-if="coreHostActions.isCoreUpgrading.value"
+                  class="loading loading-spinner loading-xs"
+                />
+                {{ coreHostActions.isCoreUpgrading.value ? '升级中' : '升级内核' }}
+              </button>
+              <button
+                class="btn btn-sm dashboard-action-btn"
+                @click="handlerClickReloadConfigs"
+              >
+                <span
+                  v-if="isConfigReloading"
                   class="loading loading-spinner loading-md"
                 ></span>
-                {{ $t('updateGeoDatabase') }}
+                {{ $t('reloadConfigs') }}
               </button>
-            </template>
-            <button
-              class="btn btn-sm dashboard-action-btn"
-              @click="handleFlushDNSCache"
-            >
-              {{ $t('flushDNSCache') }}
-            </button>
-            <button
-              class="btn btn-sm dashboard-action-btn"
-              @click="handleFlushFakeIP"
-            >
-              {{ $t('flushFakeIP') }}
-            </button>
-            <button
-              v-if="hasSmartGroup"
-              class="btn btn-sm dashboard-action-btn"
-              @click="handleFlushSmartWeights"
-            >
-              {{ $t('flushSmartWeights') }}
-            </button>
+              <template v-if="!isSingBox || displayAllFeatures">
+                <button
+                  class="btn btn-sm dashboard-action-btn"
+                  @click="handlerClickUpdateGeo"
+                >
+                  <span
+                    v-if="isGeoUpdating"
+                    class="loading loading-spinner loading-md"
+                  ></span>
+                  {{ $t('updateGeoDatabase') }}
+                </button>
+              </template>
+              <button
+                class="btn btn-sm dashboard-action-btn"
+                @click="handleFlushDNSCache"
+              >
+                {{ $t('flushDNSCache') }}
+              </button>
+              <button
+                class="btn btn-sm dashboard-action-btn"
+                @click="handleFlushFakeIP"
+              >
+                {{ $t('flushFakeIP') }}
+              </button>
+              <button
+                v-if="hasSmartGroup"
+                class="btn btn-sm dashboard-action-btn"
+                @click="handleFlushSmartWeights"
+              >
+                {{ $t('flushSmartWeights') }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div>
+      <div class="flex min-h-0 flex-col rounded-lg p-2">
+        <div class="dashboard-section-title">当前下载</div>
         <div
-          v-if="configs && canShowPortsGrid"
-          class="settings-grid"
+          class="settings-grid min-h-[232px] flex-1"
         >
-          <BackendPortsGrid />
-        </div>
-
-        <div class="settings-section-label">当前下载</div>
-        <div class="settings-grid">
-          <div class="min-h-[136px] p-3">
+          <div
+            class="setting-panel-row h-full"
+          >
             <TopDownloadConnections />
           </div>
         </div>
@@ -152,7 +150,6 @@ import {
   updateGeoDataAPI,
 } from '@/api'
 import BackendVersion from '@/components/common/BackendVersion.vue'
-import BackendPortsGrid from '@/components/settings/backend/BackendPortsGrid.vue'
 import TopDownloadConnections from '@/components/settings/backend/TopDownloadConnections.vue'
 import { coreHostActionsKey } from '@/composables/coreHostActions'
 import { MIHOMO, MIHOMO_CHANNEL } from '@/constant'
@@ -174,18 +171,6 @@ const tunModeEnabled = computed(() =>
     ? !!configs.value?.tun?.enable
     : !!activeBackend.value?.readOnlyTunEnabled,
 )
-type PortConfigKey = 'mixed-port' | 'port' | 'socks-port' | 'redir-port' | 'tproxy-port'
-const portConfigKeys: PortConfigKey[] = [
-  'mixed-port',
-  'port',
-  'socks-port',
-  'redir-port',
-  'tproxy-port',
-]
-const canShowPortsGrid = computed(() =>
-  portConfigKeys.some((key) => typeof configs.value?.[key] === 'number'),
-)
-
 const reloadAll = () => {
   fetchConfigs()
   fetchRules()
