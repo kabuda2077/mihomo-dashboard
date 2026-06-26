@@ -11,7 +11,7 @@ export const usePaddingForViews = (
 ) => {
   const { offsetTop, offsetBottom } = config
   const paddingTop = computed(() => {
-    if (isMiddleScreen.value) {
+    if (ctrlsBottom.value) {
       return ctrlsBottom.value + offsetTop
     }
     return 0

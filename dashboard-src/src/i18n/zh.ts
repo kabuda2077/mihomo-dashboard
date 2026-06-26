@@ -2,6 +2,7 @@ import type { LANG_MESSAGE } from './en'
 
 const zh: LANG_MESSAGE = {
   // Navigation
+  core: '内核',
   setup: '配置',
   overview: '概览',
   proxies: '代理',

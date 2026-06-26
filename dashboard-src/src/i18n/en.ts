@@ -1,5 +1,6 @@
 const en = {
   // Navigation
+  core: 'Core',
   setup: 'Setup',
   overview: 'Overview',
   proxies: 'Proxies',
