@@ -1,6 +1,6 @@
 <template>
   <CtrlsBar>
-    <div class="flex h-12 flex-row items-center gap-2 p-2 text-sm">
+    <div class="flex h-9 flex-row items-center gap-2 text-sm">
       <button
         class="btn btn-circle btn-sm"
         @click="showCardSettingsDialog = true"

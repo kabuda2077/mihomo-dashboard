@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 type DropdownOption = {
   label: string
@@ -77,4 +77,34 @@ const selectOption = (value: unknown) => {
     detailsRef.value.open = false
   }
 }
+
+const closeDropdown = () => {
+  if (detailsRef.value) {
+    detailsRef.value.open = false
+  }
+}
+
+const handleDocumentPointerDown = (event: PointerEvent) => {
+  const details = detailsRef.value
+  if (!details?.open || !event.target) return
+  if (!details.contains(event.target as Node)) {
+    closeDropdown()
+  }
+}
+
+const handleDocumentKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    closeDropdown()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
+  document.addEventListener('keydown', handleDocumentKeyDown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  document.removeEventListener('keydown', handleDocumentKeyDown)
+})
 </script>
