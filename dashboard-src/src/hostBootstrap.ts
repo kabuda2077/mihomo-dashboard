@@ -5,6 +5,7 @@ import type { Backend } from '@/types'
 
 type HostState = {
   coreType?: string
+  coreVersion?: string
   apiUrl?: string
   secret?: string
   readOnlyTunEnabled?: boolean
@@ -27,6 +28,7 @@ type HostWindow = Window & {
     }
   }
   __mihomoApplyBackend?: (state: HostState) => void
+  __mihomoHostCoreVersion?: string
   __mihomoIconCache?: Record<string, string>
 }
 
@@ -84,9 +86,10 @@ const applyBackendFromState = (state: HostState | undefined, replaceExisting = f
 let backendSignature = ''
 const applyHostState = (state: HostState | undefined) => {
   applyIconCache(state)
+  ;(window as HostWindow).__mihomoHostCoreVersion = state?.coreVersion || ''
   const backend = applyBackendFromState(state, true)
   const nextSignature = backend
-    ? `${backend.protocol}://${backend.host}:${backend.port}${backend.secondaryPath}|${backend.password}|${state?.coreType ?? ''}`
+    ? `${backend.protocol}://${backend.host}:${backend.port}${backend.secondaryPath}|${backend.password}|${state?.coreType ?? ''}|${state?.coreVersion ?? ''}`
     : ''
 
   if (nextSignature && nextSignature !== backendSignature) {

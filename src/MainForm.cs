@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -39,6 +40,8 @@ public sealed class MainForm : Form
     private bool _webViewSuspended;
     private int _dashboardSuspendVersion;
     private string? _pendingDashboardNotice;
+    private string _cachedCoreVersionKey = "";
+    private string _cachedCoreVersion = "";
     private readonly System.Windows.Forms.Timer _stateRefreshTimer = new() { Interval = 150 };
     private readonly System.Windows.Forms.Timer _dashboardDisposeTimer = new() { Interval = DelayedDashboardDisposeMs };
     private DateTime _lastStateRefresh = DateTime.MinValue;
@@ -966,6 +969,7 @@ public sealed class MainForm : Form
             processId = _core.ProcessId,
             coreType = _settings.CoreType,
             coreTitle = _settings.CoreTitle,
+            coreVersion = GetCachedActiveCoreVersion(),
             corePath = _settings.ActiveCorePath,
             configPath = _settings.ActiveConfigPath,
             apiUrl = _settings.ActiveDashboardApiUrl,
@@ -1058,6 +1062,96 @@ public sealed class MainForm : Form
         }
 
         return false;
+    }
+
+    private string GetCachedActiveCoreVersion()
+    {
+        var corePath = _settings.ActiveCorePath;
+        if (string.IsNullOrWhiteSpace(corePath) || !File.Exists(corePath))
+        {
+            _cachedCoreVersionKey = "";
+            _cachedCoreVersion = "";
+            return "";
+        }
+
+        try
+        {
+            var lastWrite = File.GetLastWriteTimeUtc(corePath).Ticks;
+            var key = $"{_settings.CoreType}|{Path.GetFullPath(corePath)}|{lastWrite}";
+            if (string.Equals(key, _cachedCoreVersionKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return _cachedCoreVersion;
+            }
+
+            _cachedCoreVersionKey = key;
+            _cachedCoreVersion = ReadCoreVersion(corePath, _settings.IsSingBox);
+            return _cachedCoreVersion;
+        }
+        catch
+        {
+            return _cachedCoreVersion;
+        }
+    }
+
+    private static string ReadCoreVersion(string corePath, bool isSingBox)
+    {
+        var startInfo = new ProcessStartInfo(corePath, isSingBox ? "version" : "-v")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        try
+        {
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return "";
+            }
+
+            if (!process.WaitForExit(2000))
+            {
+                TryKill(process);
+                return "";
+            }
+
+            var output = $"{process.StandardOutput.ReadToEnd()} {process.StandardError.ReadToEnd()}";
+            return FormatCoreVersion(output, isSingBox);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private static string FormatCoreVersion(string output, bool isSingBox)
+    {
+        var match = Regex.Match(output, @"v?\d+\.\d+\.\d+(?:[-+.][A-Za-z0-9.-]+)?");
+        if (!match.Success)
+        {
+            return "";
+        }
+
+        var version = match.Value.Trim();
+        return isSingBox
+            ? $"sing-box {version.TrimStart('v', 'V')}"
+            : version;
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private Task ShowDashboardNoticeAsync(string message)
