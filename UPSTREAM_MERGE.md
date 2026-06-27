@@ -96,6 +96,16 @@ Preserve these decisions unless the product direction is explicitly changed.
 - A sing-box config may expose both `clash_api.external_controller` and `services.type=api`; this Dashboard uses the Clash-compatible endpoint, not the native/dashboard service endpoint.
 - Runtime version display should prefer Clash `/version`, but may fall back to the desktop host's executable version when the API is not ready.
 
+### sing-box Version Display Contract
+
+Do not regress the Backend version display after switching cores.
+
+- The Backend title/version area must show the active core version after switching from mihomo to sing-box.
+- In the desktop product, sing-box version should be read from the Clash-compatible API first: `clash_api.external_controller` + `/version`.
+- Do not treat sing-box `services.type=api` as the desktop Dashboard main API. That service may exist for sing-box's own dashboard/native API and can use a different port.
+- If Clash `/version` is not reachable yet, use the C# host-provided executable version fallback, read from the active `sing-box.exe version` output.
+- A failed API probe must not leave the Backend title with only the sing-box icon and no version text.
+
 ### Settings Defaults
 
 - The settings title is `Dashboard`, without upstream version, commit id, update indicator, or upstream GitHub link.
@@ -318,6 +328,8 @@ Product:
 - [ ] Lightweight close-to-tray delays WebView disposal and tray reopen cancels pending disposal.
 - [ ] sing-box uses the Clash-compatible API path for main dashboard pages.
 - [ ] Runtime version display works after switching between mihomo and sing-box.
+- [ ] sing-box Backend version does not disappear when Clash `/version` is temporarily unreachable; host executable-version fallback still displays text.
+- [ ] sing-box `services.type=api` port was not mistaken for `clash_api.external_controller`.
 
 Build and review:
 
